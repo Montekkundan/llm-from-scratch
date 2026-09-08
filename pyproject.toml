@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-from-scratch-course"
+version = "0.1.0"
+description = "PicoLLM: original CPU-scale decoder built throughout the LLM course"
+requires-python = ">=3.10"
+dependencies = ["torch==2.9.1"]
+
+[tool.setuptools]
+py-modules = ["course_model"]

@@ -1,0 +1,825 @@
+{
+  "version": 1,
+  "project": "PicoLLM",
+  "projectDownload": "/lectures/downloads/llm-from-scratch.zip",
+  "phases": [
+    {
+      "id": "architecture",
+      "title": "Build PicoLLM",
+      "kind": "core",
+      "description": "Objective, token IDs and one verified decoder implementation."
+    },
+    {
+      "id": "training",
+      "title": "Train and release the base model",
+      "kind": "core",
+      "description": "Document data, correct updates, evaluation and reproducible artifacts."
+    },
+    {
+      "id": "runtime",
+      "title": "Generate and understand inference",
+      "kind": "core",
+      "description": "Sampling, cache equivalence and bounded runtime experiments on the same weights."
+    },
+    {
+      "id": "chat",
+      "title": "Adapt and evaluate the same model",
+      "kind": "core",
+      "description": "One chat template, assistant-only training and honest held-out evaluation."
+    },
+    {
+      "id": "research",
+      "title": "Extend the verified baseline",
+      "kind": "extension",
+      "description": "Optional scaling and systems investigations with explicit proof boundaries."
+    }
+  ],
+  "lessons": [
+    {
+      "order": 1,
+      "slug": "causal-language-modeling",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Define the prediction contract",
+      "build": "Map BOS \u2192 first byte, each byte \u2192 its successor, and the last byte \u2192 EOS. Write the negative log-likelihood against these shifted labels before touching the architecture.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "PicoLLM.forward"
+        },
+        {
+          "path": "checks.py",
+          "symbol": "run"
+        }
+      ],
+      "commands": [
+        "python checks.py objective --output runs/checks/01-objective.json"
+      ],
+      "artifact": "runs/checks/01-objective.json",
+      "invariant": "The model logits and gathered log probabilities give the same token-mean cross-entropy.",
+      "prerequisite": "A local copy of the original model project and Python with PyTorch 2.9.1.",
+      "next": "tokenization",
+      "explanation": "At this first checkpoint the initialized decoder is a measuring instrument, not a trained model. Trace its [batch, time, vocabulary] output to the objective in checks.py. Later changes to data, cache or chat serialization must preserve this meaning of a logit."
+    },
+    {
+      "order": 2,
+      "slug": "tokenization",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Give PicoLLM one stable alphabet",
+      "build": "Implement the byte encoder and strict framed decoder. Keep ordinary bytes 0\u2013255 and reserve BOS=256, EOS=257 and PAD=258 in one module used by every later stage.",
+      "files": [
+        {
+          "path": "tokenizer.py",
+          "symbol": "encode"
+        },
+        {
+          "path": "tokenizer.py",
+          "symbol": "decode"
+        }
+      ],
+      "commands": [
+        "python checks.py tokenizer --output runs/checks/02-tokenizer.json"
+      ],
+      "artifact": "runs/checks/02-tokenizer.json",
+      "invariant": "Six strings round-trip exactly; caf\u00e9 occupies five UTF-8 bytes and seven framed IDs.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "train-a-byte-pair-tokenizer",
+      "explanation": "The deployable baseline keeps this exact alphabet throughout pretraining and SFT. Trace train.batch and generate.py back to tokenizer.py so a change in text encoding cannot silently fork the training and serving paths. Byte fragments are decoded only after concatenation."
+    },
+    {
+      "order": 3,
+      "slug": "train-a-byte-pair-tokenizer",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Build and isolate a BPE experiment",
+      "build": "Train two ordered merges on the tiny repeated corpus, serialize their ranks, and verify that decoding restores bytes. Retain this as a tokenizer experiment beside the baseline.",
+      "files": [
+        {
+          "path": "tokenizer.py",
+          "symbol": "train_bpe"
+        },
+        {
+          "path": "tokenizer.py",
+          "symbol": "encode_bpe"
+        },
+        {
+          "path": "tokenizer.py",
+          "symbol": "decode_bpe"
+        }
+      ],
+      "commands": [
+        "python checks.py bpe --output runs/checks/03-bpe.json"
+      ],
+      "artifact": "runs/checks/03-bpe.json",
+      "invariant": "The merges (97,98)\u2192259 and (259,259)\u2192260 compress abab to one ID; the main model still has vocabulary 259.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "embedding-layer",
+      "explanation": "BPE is a representation branch, not a silent upgrade to an existing checkpoint. To train a BPE PicoLLM, add the matching tokenizer artifact/loader, build a fresh model with its actual vocabulary, and retrain. The core path deliberately keeps bytes so every later released weight tensor remains compatible."
+    },
+    {
+      "order": 4,
+      "slug": "embedding-layer",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Install the shared embedding table",
+      "build": "Use token_embedding for input lookup and assign that same Parameter object to lm_head.weight. Follow repeated token IDs through indexing and gradient accumulation.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "PicoLLM.__init__"
+        },
+        {
+          "path": "checks.py",
+          "symbol": "run"
+        }
+      ],
+      "commands": [
+        "python checks.py embedding --output runs/checks/04-embedding.json"
+      ],
+      "artifact": "runs/checks/04-embedding.json",
+      "invariant": "The table has 16,576 parameters; repeated lookup accumulates gradients and the output head shares its identity.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "positional-encoding",
+      "explanation": "Inspect the real model parameter list rather than counting state-dictionary keys: the two names refer to one trainable table. This distinction reappears in optimizer groups, quantization and checkpoint reload, where accidentally copying the table would change both the model and its parameter budget."
+    },
+    {
+      "order": 5,
+      "slug": "positional-encoding",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Attach position to the actual attention heads",
+      "build": "Implement adjacent-coordinate rotations inside each query and key head. Start with the first head and compare norms and dot products before and after a common position shift.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "apply_rope"
+        },
+        {
+          "path": "course_model.py",
+          "symbol": "CausalAttention.forward"
+        }
+      ],
+      "commands": [
+        "python checks.py rope --output runs/checks/05-rope.json"
+      ],
+      "artifact": "runs/checks/05-rope.json",
+      "invariant": "RoPE preserves pair norms, and a shared position shift leaves the query-key dot product unchanged within tolerance.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "scaled-dot-product-attention",
+      "explanation": "Keep the pairing convention, rotary base and head width in ModelConfig. At lesson 21 the new query starts at the cached prefix length, not at zero; the common-shift calculation here explains why a cache with the wrong offset can have correct shapes and incorrect predictions."
+    },
+    {
+      "order": 6,
+      "slug": "scaled-dot-product-attention",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Make one causal attention computation inspectable",
+      "build": "Trace the first head from qkv projection through scaled scores, the upper-triangular forbidden mask, row softmax and weighted values. Inspect the first position of the actual PicoLLM module.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "CausalAttention.forward"
+        }
+      ],
+      "commands": [
+        "python checks.py attention --output runs/checks/06-attention.json"
+      ],
+      "artifact": "runs/checks/06-attention.json",
+      "invariant": "At position zero the only visible value is its own; gradients from an earlier output to future inputs are zero.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "multi-head-attention",
+      "explanation": "The complete model already stores all heads in one fused projection. Treat a single slice as the mathematical unit in this lesson, then join the slices in the next one. Do not introduce a second attention implementation whose mask semantics could drift from the trained model."
+    },
+    {
+      "order": 7,
+      "slug": "multi-head-attention",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Join heads without mixing time and features",
+      "build": "Follow reshape and transpose through [B,T,3d] \u2192 [B,H,T,d/H], then return the concatenated values to [B,T,d] before the output projection.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "CausalAttention.forward"
+        }
+      ],
+      "commands": [
+        "python checks.py heads --output runs/checks/07-heads.json"
+      ],
+      "artifact": "runs/checks/07-heads.json",
+      "invariant": "The real attention module has four width-16 heads, returns [2,5,64], and has 16,384 weights.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "feed-forward-network",
+      "explanation": "Use a distinct marker per head when stepping through the tensor transformation. The projection learns combinations of head features at the same token position; the reshape itself must never combine token positions. Keep the causality assertion enabled while editing these lines."
+    },
+    {
+      "order": 8,
+      "slug": "feed-forward-network",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Add PicoLLM\u2019s tokenwise nonlinear branch",
+      "build": "Implement the gate, value and output matrices in SwiGLU and compare the module to its explicit formula using the same stored weights.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "SwiGLU.forward"
+        },
+        {
+          "path": "course_model.py",
+          "symbol": "DecoderBlock.forward"
+        }
+      ],
+      "commands": [
+        "python checks.py swiglu --output runs/checks/08-swiglu.json"
+      ],
+      "artifact": "runs/checks/08-swiglu.json",
+      "invariant": "The hidden width is 176 and the branch has 33,792 weights; changing a later input does not change an earlier output.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "layer-normalization",
+      "explanation": "The gated product is a feature transformation at each position. Attention supplies cross-token communication; this branch does not. Retain its width in the configuration because lesson 30 compares it with a parameter-matched alternative rather than quietly increasing model capacity."
+    },
+    {
+      "order": 9,
+      "slug": "layer-normalization",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Keep the residual path intact",
+      "build": "Normalize only the feature axis before each branch. Zero the two branch output matrices temporarily and prove that the entire decoder block becomes the identity.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "RMSNorm.forward"
+        },
+        {
+          "path": "course_model.py",
+          "symbol": "DecoderBlock.forward"
+        }
+      ],
+      "commands": [
+        "python checks.py norm --output runs/checks/09-norm.json"
+      ],
+      "artifact": "runs/checks/09-norm.json",
+      "invariant": "Explicit RMSNorm matches PyTorch RMSNorm at eps=1e-5, and zero branches return the original tensor exactly.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "decoder-block",
+      "explanation": "The identity check is a precise consequence of the residual placement, not an assertion that normalization never changes scale. Restore the untouched model after the diagnostic. This is a useful repair tool when a later training failure might come from a branch layout error."
+    },
+    {
+      "order": 10,
+      "slug": "decoder-block",
+      "phase": "architecture",
+      "kind": "core",
+      "stageTitle": "Assemble the complete untrained PicoLLM",
+      "build": "Assemble two decoder blocks, final RMSNorm and the tied output projection. Verify shapes, future-token independence and a backward pass through every parameter.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "PicoLLM"
+        },
+        {
+          "path": "course_model.py",
+          "symbol": "ModelConfig"
+        }
+      ],
+      "commands": [
+        "python checks.py decoder --output runs/checks/10-decoder.json"
+      ],
+      "artifact": "runs/checks/10-decoder.json",
+      "invariant": "The baseline has 117,248 unique parameters, three tested causal prefixes and finite gradients for all trainable parameters.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "data-curation-and-dataset-quality",
+      "explanation": "This checkpoint is the architectural handoff to the data and optimization lessons. Implement the pieces yourself using their earlier derivations, then compare against the original reference file. Successful tests mean the computation is wired correctly; no weight has yet been trained on the corpus."
+    },
+    {
+      "order": 11,
+      "slug": "data-curation-and-dataset-quality",
+      "phase": "training",
+      "kind": "core",
+      "stageTitle": "Freeze document identity before making windows",
+      "build": "Audit the 64 synthetic documents and their declared split, then prepare separate train.jsonl and validation.jsonl files for a corpus you are authorized to use. Preserve source and document-group metadata.",
+      "files": [
+        {
+          "path": "train.py",
+          "symbol": "corpus"
+        },
+        {
+          "path": "train.py",
+          "symbol": "read_documents"
+        },
+        {
+          "path": "train.py",
+          "symbol": "document_windows"
+        }
+      ],
+      "commands": [
+        "python checks.py corpus --output runs/checks/11-corpus.json"
+      ],
+      "artifact": "runs/checks/11-corpus.json",
+      "invariant": "Default splits contain 51 training and 13 validation documents; the external loader rejects duplicate content and groups crossing splits.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "input-target-batches",
+      "explanation": "A file split is not by itself proof against leakage. Keep related editions, passages and conversations in the same group before assigning a split, and audit near duplicates separately. The loader enforces exact content and explicit group boundaries; it cannot discover undeclared semantic relationships."
+    },
+    {
+      "order": 12,
+      "slug": "input-target-batches",
+      "phase": "training",
+      "kind": "core",
+      "stageTitle": "Turn each document into counted targets",
+      "build": "Construct right-padded input/target pairs and mark unused targets -100. For long documents, use explicit context windows that never cross document boundaries and retain the preceding token as input.",
+      "files": [
+        {
+          "path": "train.py",
+          "symbol": "batch"
+        },
+        {
+          "path": "train.py",
+          "symbol": "document_windows"
+        },
+        {
+          "path": "train.py",
+          "symbol": "measure"
+        }
+      ],
+      "commands": [
+        "python checks.py batches --output runs/checks/12-batches.json"
+      ],
+      "artifact": "runs/checks/12-batches.json",
+      "invariant": "hi and caf\u00e9 supply nine targets in total. Across windows each source byte and the final EOS is scored exactly once.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "optimizer-theory-for-transformer-training",
+      "explanation": "The bounded loader resets RoPE positions at every window and discards older context at that boundary. It does not add artificial EOS between chunks or decode partial UTF-8 chunks as separate documents. This explicit policy is simple to audit, but it differs from overlapping-context evaluation and should be recorded with reported loss."
+    },
+    {
+      "order": 13,
+      "slug": "optimizer-theory-for-transformer-training",
+      "phase": "training",
+      "kind": "core",
+      "stageTitle": "Update each shared parameter once",
+      "build": "Create AdamW groups from unique Parameter objects: decay matrix weights and leave the one-dimensional normalization scales out of weight decay. Apply one measured gradient update.",
+      "files": [
+        {
+          "path": "train.py",
+          "symbol": "optimizer_for"
+        },
+        {
+          "path": "train.py",
+          "symbol": "learning_rate"
+        }
+      ],
+      "commands": [
+        "python checks.py optimizer --output runs/checks/13-optimizer.json"
+      ],
+      "artifact": "runs/checks/13-optimizer.json",
+      "invariant": "Two groups contain 16 unique parameter objects, and the update changes the embedding weights without duplicating the tied head.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "training-loop",
+      "explanation": "Keep optimizer construction next to the training entry point, where the learning-rate schedule and resume state can be inspected together. A new optimizer is appropriate for SFT later; resuming an interrupted base run instead requires restoring its existing moments and counters."
+    },
+    {
+      "order": 14,
+      "slug": "training-loop",
+      "phase": "training",
+      "kind": "core",
+      "stageTitle": "Make the training update account for every target",
+      "build": "Compute summed cross-entropy divided by the number of nonignored targets, backpropagate, clip finite gradients and update the model. Compare a full batch with two microbatches using the same global denominator.",
+      "files": [
+        {
+          "path": "train.py",
+          "symbol": "main"
+        },
+        {
+          "path": "checks.py",
+          "symbol": "run"
+        }
+      ],
+      "commands": [
+        "python checks.py loop --output runs/checks/14-loop.json"
+      ],
+      "artifact": "runs/checks/14-loop.json",
+      "invariant": "The maximum full-versus-accumulated gradient error is below 1e-10 in the float64 check.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "training-configuration-and-hyperparameters",
+      "explanation": "This proof catches a common training-loop bug before a long run: averaging already averaged microbatch losses weights a short document like a long one. The actual CPU trainer uses a direct minibatch, but the verified denominator is also the contract for the distributed extension."
+    },
+    {
+      "order": 15,
+      "slug": "training-configuration-and-hyperparameters",
+      "phase": "training",
+      "kind": "core",
+      "stageTitle": "Budget the model before launching a run",
+      "build": "Compute the actual parameter count, FP32 weight bytes and a dense full-context KV-cache estimate. Inspect the warmup and cosine endpoints in the trainer.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "ModelConfig"
+        },
+        {
+          "path": "train.py",
+          "symbol": "learning_rate"
+        }
+      ],
+      "commands": [
+        "python checks.py budget --output runs/checks/15-budget.json"
+      ],
+      "artifact": "runs/checks/15-budget.json",
+      "invariant": "The baseline uses 468,992 raw FP32 weight bytes and 131,072 dense FP32 KV-cache bytes at batch one and context 128.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "evaluation-and-model-quality",
+      "explanation": "These are tensor accounting figures, not peak process memory. Optimizer state, activations, temporary scores and framework overhead require additional space. Increase width, layers, heads, context and feed-forward width explicitly through train.py flags and preserve the resulting config.json with the new checkpoint."
+    },
+    {
+      "order": 16,
+      "slug": "evaluation-and-model-quality",
+      "phase": "training",
+      "kind": "core",
+      "stageTitle": "Evaluate a distribution rather than one attractive sample",
+      "build": "Aggregate loss numerators and target counts across held-out documents, retaining per-document records and a separate byte-only denominator. Compare different evaluation batch sizes.",
+      "files": [
+        {
+          "path": "train.py",
+          "symbol": "measure"
+        },
+        {
+          "path": "evaluate.py",
+          "symbol": "main"
+        }
+      ],
+      "commands": [
+        "python checks.py evaluation --output runs/checks/16-evaluation.json"
+      ],
+      "artifact": "runs/checks/16-evaluation.json",
+      "invariant": "The untrained held-out mean agrees across batch sizes within floating-point tolerance; EOS contributes to target NLL but not bits per byte.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "failure-modes-and-debugging",
+      "explanation": "After lesson 19, rerun the same measurement on runs/picollm-base using evaluate.py. Never compare this byte-model perplexity directly with a different tokenizer\u2019s perplexity. The stored per-document results also provide the correct unit for a later paired uncertainty analysis."
+    },
+    {
+      "order": 17,
+      "slug": "failure-modes-and-debugging",
+      "phase": "training",
+      "kind": "core",
+      "stageTitle": "Debug the actual graph before tuning the run",
+      "build": "Run the model\u2019s shape, prefix-invariance and finite-gradient checks before changing learning rate or model size. Deliberately break one mask or transpose locally and ensure the relevant assertion catches it.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "PicoLLM.forward"
+        },
+        {
+          "path": "checks.py",
+          "symbol": "run"
+        }
+      ],
+      "commands": [
+        "python checks.py debug --output runs/checks/17-debug.json"
+      ],
+      "artifact": "runs/checks/17-debug.json",
+      "invariant": "All parameter gradients exist and remain finite; changing suffix tokens leaves the three tested prefixes unchanged.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "reproducibility-and-research-method",
+      "explanation": "Restore the passing code before saving a checkpoint. If these checks pass but optimization still fails, inspect target counts, data samples, loss reductions and parameter updates in that order. A passing diagnostic narrows the fault boundary; it does not certify all possible inputs or useful generation."
+    },
+    {
+      "order": 18,
+      "slug": "reproducibility-and-research-method",
+      "phase": "training",
+      "kind": "core",
+      "stageTitle": "Record a run identity that can be reconstructed",
+      "build": "Record configuration, document hashes, source hashes, random seed, sampling state and optimizer state. Keep the inference artifact separate from the resumable training checkpoint.",
+      "files": [
+        {
+          "path": "train.py",
+          "symbol": "main"
+        },
+        {
+          "path": "checks.py",
+          "symbol": "run"
+        }
+      ],
+      "commands": [
+        "python checks.py identity --output runs/checks/18-identity.json"
+      ],
+      "artifact": "runs/checks/18-identity.json",
+      "invariant": "The identity report hashes the actual source project; a resumed run must retain the same schedule budget and corpus signature.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "train-and-release-a-small-base-model",
+      "explanation": "The exact-continuation experiment in lesson 19 compares final tensors and sampled batch history, not wall-clock time. A changed dataset or context policy starts a new experiment. Environment recording makes differences visible but does not promise identical floating-point results across hardware or library versions."
+    },
+    {
+      "order": 19,
+      "slug": "train-and-release-a-small-base-model",
+      "phase": "training",
+      "kind": "core",
+      "stageTitle": "Train and reload the first PicoLLM artifact",
+      "build": "Train the same assembled byte decoder from random weights, evaluate its held-out documents, export the model/config/tokenizer and verify the manifest before a strict CPU reload.",
+      "files": [
+        {
+          "path": "train.py",
+          "symbol": "main"
+        },
+        {
+          "path": "evaluate.py",
+          "symbol": "load_artifact"
+        }
+      ],
+      "commands": [
+        "python train.py --output runs/picollm-base --steps 160",
+        "python evaluate.py runs/picollm-base"
+      ],
+      "artifact": "runs/picollm-base",
+      "invariant": "The 160-update mechanics run reaches validation NLL about 0.2753 and reloads with exactly equal probe logits.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "inference-and-sampling",
+      "explanation": "Keep runs/picollm-base intact. Every following runtime experiment consumes this directory, and chat adaptation copies these weights rather than starting over. A second real-text command uses your document files and an explicit model configuration; its quality requires a longer measured experiment, not extrapolation from the synthetic run."
+    },
+    {
+      "order": 20,
+      "slug": "inference-and-sampling",
+      "phase": "runtime",
+      "kind": "core",
+      "stageTitle": "Generate from the checkpoint you just trained",
+      "build": "Load runs/picollm-base, encode an actual prompt with BOS and sample one distribution at a time. Record selected IDs, stopping reason, token counts, seed and model fingerprint.",
+      "files": [
+        {
+          "path": "generate.py",
+          "symbol": "generate_ids"
+        },
+        {
+          "path": "evaluate.py",
+          "symbol": "load_artifact"
+        }
+      ],
+      "commands": [
+        "python generate.py runs/picollm-base --prompt 'red fox ' --max-new-tokens 24 --output runs/base-sample.json"
+      ],
+      "artifact": "runs/base-sample.json",
+      "invariant": "Greedy generation is repeatable for the same checkpoint and prompt; BOS and PAD are excluded from generated content and EOS ends the sequence.",
+      "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
+      "next": "inference-runtime-and-kv-cache",
+      "explanation": "The generation budget counts IDs, including EOS, while decoded text excludes special IDs. UTF-8 characters can span several generated bytes, so join the byte sequence before decoding in this local command. The deployment course later carries the same distinction into an incremental stream decoder."
+    },
+    {
+      "order": 21,
+      "slug": "inference-runtime-and-kv-cache",
+      "phase": "runtime",
+      "kind": "core",
+      "stageTitle": "Reuse the same prefix without changing its predictions",
+      "build": "Add cache-aware forward computation to the trained decoder, carrying each layer\u2019s rotated keys and values together with the exact prefix identity and parameter version.",
+      "files": [
+        {
+          "path": "course_model.py",
+          "symbol": "PicoLLM.forward_cached"
+        },
+        {
+          "path": "course_model.py",
+          "symbol": "KVCache.assert_prefix"
+        }
+      ],
+      "commands": [
+        "python experiments.py cache --artifact runs/picollm-base --output runs/experiments/cache.json"
+      ],
+      "artifact": "runs/experiments/cache.json",
+      "invariant": "One-token and multi-token continuations agree with full-prefix logits; edited prefixes, another model instance and changed weights are rejected.",
+      "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
+      "next": "advanced-inference-systems",
+      "explanation": "The cache is request-local ephemeral state, not an extra learned parameter or a new checkpoint format. Reset it after editing conversation history, switching weights or changing the positional convention. Keep full-prefix forward as the correctness oracle, especially near the context boundary."
+    },
+    {
+      "order": 22,
+      "slug": "advanced-inference-systems",
+      "phase": "runtime",
+      "kind": "extension",
+      "stageTitle": "Measure a runtime change on the same artifact",
+      "build": "Compare cached and uncached generation on the same CPU model, prompt, seed and output budget. Warm each path and record all timing samples alongside the emitted token IDs.",
+      "files": [
+        {
+          "path": "experiments.py",
+          "symbol": "profile"
+        },
+        {
+          "path": "generate.py",
+          "symbol": "generate_ids"
+        }
+      ],
+      "commands": [
+        "python experiments.py profile --artifact runs/picollm-base --output runs/experiments/profile.json"
+      ],
+      "artifact": "runs/experiments/profile.json",
+      "invariant": "The two paths emit identical greedy token IDs; five CPU wall-clock samples are retained for each path.",
+      "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
+      "next": "quantization",
+      "explanation": "This is a systems extension. The report does not demonstrate FlashAttention, paged memory, continuous batching or GPU speedup. Use its controlled identity and output checks when implementing one of those advanced runtimes; replace the timing harness appropriately for asynchronous hardware."
+    },
+    {
+      "order": 23,
+      "slug": "quantization",
+      "phase": "runtime",
+      "kind": "core",
+      "stageTitle": "Quantify approximation before changing a serving format",
+      "build": "Clone the loaded base model, quantize each unique matrix to symmetric per-tensor int8 values, reconstruct FP32 weights and rescore the same held-out documents.",
+      "files": [
+        {
+          "path": "experiments.py",
+          "symbol": "quantize_probe"
+        }
+      ],
+      "commands": [
+        "python experiments.py quantize --artifact runs/picollm-base --output runs/experiments/quantize.json"
+      ],
+      "artifact": "runs/experiments/quantize.json",
+      "invariant": "The tied embedding remains one object, and the report records maximum weight error plus the held-out NLL difference.",
+      "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
+      "next": "chat-format-and-sft",
+      "explanation": "This experiment isolates quantization error; reconstructed weights still run in FP32 and do not save serving memory. A packed runtime is a separate artifact/loader contract with scales and layout metadata. Keep the original base artifact as the reference and deploy it until that separate runtime is verified."
+    },
+    {
+      "order": 24,
+      "slug": "chat-format-and-sft",
+      "phase": "chat",
+      "kind": "core",
+      "stageTitle": "Specify the conversation bytes before learning them",
+      "build": "Serialize user and assistant turns using the exact role-lines-v1 headers, one initial BOS and EOS after each assistant. Construct shifted labels that supervise only assistant content, its newline and EOS.",
+      "files": [
+        {
+          "path": "chat.py",
+          "symbol": "serialize"
+        },
+        {
+          "path": "chat.py",
+          "symbol": "CHAT_TEMPLATE"
+        }
+      ],
+      "commands": [
+        "python checks.py chat --output runs/checks/24-chat.json"
+      ],
+      "artifact": "runs/checks/24-chat.json",
+      "invariant": "For user echo: red, the generation prefix contains 34 IDs and the assistant training suffix supervises exactly five targets.",
+      "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
+      "next": "sft-flow",
+      "explanation": "The same chat_template.json will travel with the trained weights into the serving project. A front-end message array does not magically become model input: the model and server must serialize identical bytes. Literal header-looking text is ordinary content here, so this tiny teaching format is not a security boundary."
+    },
+    {
+      "order": 25,
+      "slug": "sft-flow",
+      "phase": "chat",
+      "kind": "core",
+      "stageTitle": "Adapt the base checkpoint into PicoLLM chat",
+      "build": "Load runs/picollm-base and train the same parameters on a small declared echo task with assistant-only loss. Export runs/picollm-chat with the exact chat template and recorded parent model checksum.",
+      "files": [
+        {
+          "path": "sft.py",
+          "symbol": "main"
+        },
+        {
+          "path": "chat.py",
+          "symbol": "serialize"
+        },
+        {
+          "path": "generate.py",
+          "symbol": "generate_ids"
+        }
+      ],
+      "commands": [
+        "python sft.py --base runs/picollm-base --output runs/picollm-chat --steps 160",
+        "python generate.py runs/picollm-chat --message 'echo: red' --max-new-tokens 12 --cached"
+      ],
+      "artifact": "runs/picollm-chat",
+      "invariant": "At 160 updates the observed run reproduces all eight training answers; echo: red ends with red, newline and EOS. Held-out copying remains unsuccessful.",
+      "prerequisite": "The unchanged runs/picollm-base artifact and the verified role-lines-v1 serializer.",
+      "next": "formal-evaluation-and-benchmarking",
+      "explanation": "This deliberately small experiment proves the training-to-template-to-serving path. Its eight training examples are not evidence of broad instruction following. A useful assistant needs an appropriate, separately documented instruction corpus and evaluation; retain the base model as a control when measuring what specialization changed."
+    },
+    {
+      "order": 26,
+      "slug": "formal-evaluation-and-benchmarking",
+      "phase": "chat",
+      "kind": "core",
+      "stageTitle": "Measure what chat adaptation did and did not learn",
+      "build": "Reload the chat release, score assistant-token likelihood and run exact-match generation on frozen held-out words. Inspect raw predictions as well as the final aggregate.",
+      "files": [
+        {
+          "path": "sft.py",
+          "symbol": "score_task"
+        },
+        {
+          "path": "sft.py",
+          "symbol": "main"
+        }
+      ],
+      "commands": [
+        "python sft.py --evaluate runs/picollm-chat"
+      ],
+      "artifact": "runs/picollm-chat/sft-report.json",
+      "invariant": "The reference run scores 8/8 on training, 0/2 on validation and 0/2 on test; reloading reproduces the saved test token IDs.",
+      "prerequisite": "runs/picollm-chat from lesson 25, including sft-data.json and sft-report.json.",
+      "next": "scaling-laws-and-compute-optimal-training",
+      "explanation": "The failed held-out cases are part of the course result. They distinguish memorizing a role format and eight answers from learning a general copying rule. Change data, model capacity or training only after declaring a new experiment; do not quietly tune on the two test examples and relabel them held out."
+    },
+    {
+      "order": 27,
+      "slug": "scaling-laws-and-compute-optimal-training",
+      "phase": "research",
+      "kind": "extension",
+      "stageTitle": "Plan scaling experiments around the verified baseline",
+      "build": "Use the released model configuration to enumerate deeper candidate models and estimate their training budgets. Retain the current loss, data identity and measured token count as the baseline record.",
+      "files": [
+        {
+          "path": "experiments.py",
+          "symbol": "scaling_budget"
+        },
+        {
+          "path": "course_model.py",
+          "symbol": "ModelConfig"
+        }
+      ],
+      "commands": [
+        "python experiments.py scaling --artifact runs/picollm-base --output runs/experiments/scaling.json"
+      ],
+      "artifact": "runs/experiments/scaling.json",
+      "invariant": "The report counts actual parameters for each candidate and labels 6ND as a planning approximation, not a measured scaling law.",
+      "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
+      "next": "distributed-training-and-multi-gpu",
+      "explanation": "This is an optional research extension after a deployable artifact exists. A fitted scaling law needs multiple independently trained configurations and sufficient coverage to separate model size from data budget. Do not fit the three parameter counts as if they were three observed losses."
+    },
+    {
+      "order": 28,
+      "slug": "distributed-training-and-multi-gpu",
+      "phase": "research",
+      "kind": "extension",
+      "stageTitle": "Preserve the target objective across ranks",
+      "build": "Partition two actual PicoLLM examples into simulated ranks, scale local summed losses by world size/global target count, and average their gradients. Compare against the full-batch gradient.",
+      "files": [
+        {
+          "path": "experiments.py",
+          "symbol": "rank_gradient_check"
+        },
+        {
+          "path": "train.py",
+          "symbol": "batch"
+        }
+      ],
+      "commands": [
+        "python experiments.py distributed --artifact runs/picollm-base --output runs/experiments/distributed.json"
+      ],
+      "artifact": "runs/experiments/distributed.json",
+      "invariant": "The simulated two-rank mean agrees with the real full-batch gradient below 1e-10 in float64.",
+      "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
+      "next": "advanced-distributed-training-systems",
+      "explanation": "The CPU calculation proves the weighting algebra only; it does not launch distributed processes or test a collective backend. A multi-GPU implementation must additionally validate initialization, sampler partitioning, all-reduce behavior, restart state and synchronized timing. These are optional extensions to the same objective and model."
+    },
+    {
+      "order": 29,
+      "slug": "advanced-distributed-training-systems",
+      "phase": "research",
+      "kind": "extension",
+      "stageTitle": "Trade saved activations for recomputation carefully",
+      "build": "Run the real decoder blocks through nonreentrant activation checkpointing and compare every gradient to a normal forward/backward pass on the same batch and weights.",
+      "files": [
+        {
+          "path": "experiments.py",
+          "symbol": "recomputation_check"
+        },
+        {
+          "path": "course_model.py",
+          "symbol": "DecoderBlock.forward"
+        }
+      ],
+      "commands": [
+        "python experiments.py recompute --artifact runs/picollm-base --output runs/experiments/recompute.json"
+      ],
+      "artifact": "runs/experiments/recompute.json",
+      "invariant": "Recomputed and ordinary gradients agree in float64; the report makes no GPU-memory or sharded-state performance claim.",
+      "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
+      "next": "research-workflow-and-ablations",
+      "explanation": "This local check anchors the larger systems discussion in one implemented mechanism. FSDP, tensor parallelism and pipeline scheduling remain advanced implementation projects. Add only one mechanism at a time, then retain the same equivalence checks before measuring memory or throughput."
+    },
+    {
+      "order": 30,
+      "slug": "research-workflow-and-ablations",
+      "phase": "research",
+      "kind": "extension",
+      "stageTitle": "Turn the finished PicoLLM into a research baseline",
+      "build": "Export a preregistered plan for replacing SwiGLU with a parameter-matched GELU branch. Name the frozen baseline artifact, data, token budget, primary endpoint and paired seeds before launching any comparison.",
+      "files": [
+        {
+          "path": "experiments.py",
+          "symbol": "main"
+        },
+        {
+          "path": "course_model.py",
+          "symbol": "SwiGLU"
+        }
+      ],
+      "commands": [
+        "python experiments.py ablation-plan --artifact runs/picollm-base --output runs/experiments/ablation-plan.json"
+      ],
+      "artifact": "runs/experiments/ablation-plan.json",
+      "invariant": "The plan records seeds 7,11,19 and a candidate hidden width of 264; it explicitly records that the candidate and six full runs are not yet executed.",
+      "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
+      "next": "portable-model-artifacts",
+      "explanation": "The core course ends with a built, trained, evaluated and reloadable model, plus a chat derivative linked to it. Research extends that evidence chain rather than replacing it with an unrelated notebook. After the controlled experiments, deploy the same selected artifact in the companion serving and client projects."
+    }
+  ]
+}
