@@ -32,10 +32,13 @@ def corpus():
     return rows
 
 
-def read_documents(train_file, validation_file):
+def read_documents(train_file, validation_file, test_file=None):
     """Require caller-assigned document splits; reject duplicate content/groups."""
     rows, ids, hashes, groups = [], set(), set(), {}
-    for split, path in (("train", train_file), ("validation", validation_file)):
+    paths = [("train", train_file), ("validation", validation_file)]
+    if test_file is not None:
+        paths.append(("test", test_file))
+    for split, path in paths:
         count = 0
         for line_number, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
             if not line.strip():
@@ -152,6 +155,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--train-file", type=Path, help="JSONL: one original document per row")
     parser.add_argument("--validation-file", type=Path)
+    parser.add_argument("--test-file", type=Path, help="untouched final JSONL holdout; never scored during training")
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--heads", type=int, default=4)
     parser.add_argument("--layers", type=int, default=2)
@@ -160,6 +164,8 @@ def main():
     args = parser.parse_args()
     if bool(args.train_file) != bool(args.validation_file):
         parser.error("Provide both --train-file and --validation-file")
+    if args.test_file and not args.train_file:
+        parser.error("--test-file requires --train-file and --validation-file")
     if args.steps < 1 or args.batch_size < 1:
         parser.error("steps and batch size must be positive")
     stop = args.stop_after if args.stop_after is not None else args.steps
@@ -175,7 +181,7 @@ def main():
                       context=args.context, ff_width=args.ff_width)
     model = PicoLLM(cfg)
     optimizer = optimizer_for(model, 0.003)
-    rows = read_documents(args.train_file, args.validation_file) if args.train_file else corpus()
+    rows = read_documents(args.train_file, args.validation_file, args.test_file) if args.train_file else corpus()
     train = [r["text"] for r in rows if r["split"] == "train"]
     valid = [r["text"] for r in rows if r["split"] == "validation"]
     assert train and valid and not set(train) & set(valid)
@@ -246,6 +252,7 @@ def main():
               "window_policy": "nonoverlapping targets; one-token input boundary; reset RoPE; no cross-document context",
               "settings": settings, "start_step": start, "completed_steps": stop,
               "train_documents": len(train), "validation_documents": len(valid),
+              "test_documents": sum(r["split"] == "test" for r in rows),
               "unique_parameters": sum(p.numel() for p in model.parameters()),
               "initial": initial, "final": final, "trained_targets": trained_targets,
               "segment_seconds": elapsed, "reload_max_abs_logit_error": reload_error,

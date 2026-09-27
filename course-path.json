@@ -297,7 +297,7 @@
       "phase": "training",
       "kind": "core",
       "stageTitle": "Freeze document identity before making windows",
-      "build": "Audit the 64 synthetic documents and their declared split, then prepare separate train.jsonl and validation.jsonl files for a corpus you are authorized to use. Preserve source and document-group metadata.",
+      "build": "Audit the 64 synthetic documents and their declared split, then prepare separate train.jsonl, validation.jsonl and untouched test.jsonl files for a corpus you are authorized to use. Preserve source and document-group metadata.",
       "files": [
         {
           "path": "train.py",
@@ -316,10 +316,10 @@
         "python checks.py corpus --output runs/checks/11-corpus.json"
       ],
       "artifact": "runs/checks/11-corpus.json",
-      "invariant": "Default splits contain 51 training and 13 validation documents; the external loader rejects duplicate content and groups crossing splits.",
+      "invariant": "Default synthetic splits contain 51 training and 13 validation documents; the external loader rejects duplicate content and groups crossing every supplied split.",
       "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
       "next": "input-target-batches",
-      "explanation": "A file split is not by itself proof against leakage. Keep related editions, passages and conversations in the same group before assigning a split, and audit near duplicates separately. The loader enforces exact content and explicit group boundaries; it cannot discover undeclared semantic relationships."
+      "explanation": "A file split is not by itself proof against leakage. Keep related editions, passages and conversations in the same group before assigning a split, and audit near duplicates separately. Use validation for design choices and score the optional third split once after fixing the experiment. The loader enforces exact content and explicit group boundaries; it cannot discover undeclared semantic relationships."
     },
     {
       "order": 12,
@@ -453,7 +453,7 @@
       "invariant": "The untrained held-out mean agrees across batch sizes within floating-point tolerance; EOS contributes to target NLL but not bits per byte.",
       "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
       "next": "failure-modes-and-debugging",
-      "explanation": "After lesson 19, rerun the same measurement on runs/picollm-base using evaluate.py. Never compare this byte-model perplexity directly with a different tokenizer\u2019s perplexity. The stored per-document results also provide the correct unit for a later paired uncertainty analysis."
+      "explanation": "After lesson 19, rerun the same measurement on runs/picollm-base using evaluate.py. For external text, score the untouched test split after design decisions and compare against the train-only byte/EOS unigram baseline. Never compare this byte-model perplexity directly with a different tokenizer\u2019s perplexity. The stored per-document results provide the unit for a later paired uncertainty analysis."
     },
     {
       "order": 17,

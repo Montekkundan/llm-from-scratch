@@ -40,16 +40,17 @@ The model source is `course_model.py`; the shared byte IDs are in `tokenizer.py`
 
 ## Train on your own document corpus
 
-The synthetic default is a quick diagnostic. For a substantial language-model experiment, prepare separate UTF-8 document directories you are authorized to train on. Assign all documents from the same source group to one split **before** windowing. Use a top-level subdirectory for a related group, such as `train/book-a/chapter1.txt`; do not put `book-a` in validation too. The converter uses that top-level directory as the group, or the filename stem for standalone files. Review near duplicates yourself; the code only detects exact content duplicates and declared group overlap.
+The synthetic default is a quick diagnostic. For a substantial language-model experiment, prepare separate UTF-8 document directories you are authorized to train on. Assign all documents from the same source group to one split **before** windowing. Use a top-level subdirectory for a related group, such as `train/book-a/chapter1.txt`; do not put `book-a` in validation or test too. The converter uses that top-level directory as the group, or the filename stem for standalone files. Review near duplicates yourself; the code only detects exact content duplicates and declared group overlap. Keep the test split untouched while choosing the architecture, learning rate and stopping rule on training/validation.
 
 ```sh
-python prepare_data.py --train-dir documents/train --validation-dir documents/validation --output data/my-corpus --source 'My original document collection, revision 1' --license 'Original writing owned by me'
-python train.py --train-file data/my-corpus/train.jsonl --validation-file data/my-corpus/validation.jsonl --output runs/picollm-text --steps 160 --width 64 --heads 4 --layers 2 --context 128 --ff-width 176
+python prepare_data.py --train-dir documents/train --validation-dir documents/validation --test-dir documents/test --output data/my-corpus --source 'My original document collection, revision 1' --license 'Original writing owned by me'
+python train.py --train-file data/my-corpus/train.jsonl --validation-file data/my-corpus/validation.jsonl --test-file data/my-corpus/test.jsonl --output runs/picollm-text --steps 160 --width 64 --heads 4 --layers 2 --context 128 --ff-width 176
 python evaluate.py runs/picollm-text
+python evaluate.py runs/picollm-text --split test
 python generate.py runs/picollm-text --prompt 'The ' --max-new-tokens 24
 ```
 
-Replace the provenance and ownership strings with the actual source information. JSONL can also be supplied directly: each row needs a unique string `id` and nonempty `text`; `group`, `source`, and `license` preserve the declared provenance. The loader rejects duplicate text and groups shared across splits. It retains source records in `corpus.json`.
+Replace the provenance and ownership strings with the actual source information. JSONL can also be supplied directly: each row needs a unique string `id` and nonempty `text`; `group`, `source`, and `license` preserve the declared provenance. The loader rejects duplicate text and groups shared across all supplied splits. It retains source records in `corpus.json`. The third split is optional for compatibility with the earlier two-split exercise, but required for a final held-out result. Training never scores its test documents. Run `evaluate.py --split test` only after fixing the experiment design. The evaluator first verifies the saved validation result, then reports test NLL and bits per byte alongside an add-one byte/EOS unigram baseline fitted only to the training documents. Compare bits per byte on the same byte corpus; a toy model beating a context-free baseline does not establish useful language generation.
 
 Long documents are windowed at the token level. Every byte/EOS target is counted once. Each new window retains its immediately preceding token as input, resets positions to zero and discards older context; no window crosses a document. It does not fabricate EOS at chunk boundaries. The implementation loads the selected corpus into memory and retokenizes documents for this explicit reference pipeline; it is suitable for bounded teaching subsets, not a trillion-token data loader. Larger research work needs a versioned indexed dataset and measured throughput.
 

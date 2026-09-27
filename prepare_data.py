@@ -1,4 +1,4 @@
-"""Convert two deliberately assigned UTF-8 document directories into JSONL."""
+"""Convert caller-assigned UTF-8 train, validation and optional test directories into JSONL."""
 import argparse
 import json
 from pathlib import Path
@@ -23,16 +23,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--train-dir', type=Path, required=True)
     parser.add_argument('--validation-dir', type=Path, required=True)
+    parser.add_argument('--test-dir', type=Path, help='untouched final holdout')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--source', required=True, help='Provenance identifier or URL; no automatic download')
     parser.add_argument('--license', required=True, help='The actual terms or your ownership statement')
     args = parser.parse_args()
+    directories = [('train', args.train_dir), ('validation', args.validation_dir)]
+    if args.test_dir:
+        directories.append(('test', args.test_dir))
     records = {split: collect(directory, split, args.source, args.license)
-               for split, directory in [('train', args.train_dir), ('validation', args.validation_dir)]}
+               for split, directory in directories}
     args.output.mkdir(parents=True, exist_ok=False)
     for split, rows in records.items():
         (args.output / f'{split}.jsonl').write_text(''.join(json.dumps(row, ensure_ascii=False) + '\n' for row in rows), encoding='utf-8')
-    rows = read_documents(args.output / 'train.jsonl', args.output / 'validation.jsonl')
+    rows = read_documents(args.output / 'train.jsonl', args.output / 'validation.jsonl',
+                          args.output / 'test.jsonl' if args.test_dir else None)
     print(json.dumps({'documents': len(rows), 'output': str(args.output),
                       'group_policy': 'top-level source folder or standalone filename stem',
                       'limitation': 'exact duplicates and declared group overlap checked; near duplicates require a separate audit'}, indent=2))
