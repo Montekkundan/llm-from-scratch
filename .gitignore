@@ -13,3 +13,9 @@ wheels/
 !.env.example
 *.tsbuildinfo
 .DS_Store
+
+._*
+checkpoints/
+cache/
+logs/
+prepared/

@@ -1,0 +1,41 @@
+{
+  "name": "pico-400m",
+  "model": {
+    "vocab_size": 49152,
+    "width": 1024,
+    "heads": 16,
+    "layers": 26,
+    "context": 2048,
+    "ff_width": 3072,
+    "rope_base": 10000.0,
+    "eps": 1e-05
+  },
+  "training": {
+    "steps": 61036,
+    "batch_size": 8,
+    "grad_accum": 8,
+    "lr": 0.0003,
+    "warmup_steps": 1220,
+    "min_lr_ratio": 0.1,
+    "weight_decay": 0.1,
+    "seed": 20261001,
+    "dtype": "bfloat16",
+    "grad_clip": 1.0,
+    "validation_every": 100,
+    "validation_batches": 8,
+    "loss_chunk_size": 256,
+    "checkpoint_keep": 1
+  },
+  "provenance": {
+    "original_course_source_revision": "bfae8f91d05050d183b0102a2235d3b8ed08079e",
+    "planned_parameters": 404804608,
+    "planned_training_tokens": 8000110592,
+    "stage": "random-initialization pretraining followed by conversational instruction tuning",
+    "model_identity": "PicoLLM",
+    "course_creator": "Montek Singh Kundan",
+    "tokenizer_source": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+    "tokenizer_revision": "31b70e2e869a7173562077fd711b654946d38674",
+    "doc_separator_id": 0,
+    "chat_eos_id": 2
+  }
+}

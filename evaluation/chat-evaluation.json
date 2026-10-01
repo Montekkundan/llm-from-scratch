@@ -1,0 +1,2771 @@
+{
+  "version": 1,
+  "name": "PicoLLM frozen chat acceptance suite",
+  "created_at_utc": "2026-10-01T15:57:29.281883+00:00",
+  "purpose": "Human-reviewed course-demo acceptance and baseline comparison, not a scientific benchmark or guarantee of factual accuracy.",
+  "authorship": "One hundred original evaluation cases authored for this course experiment. They must be excluded from our training and development datasets. Historical overlap with pretrained-model data is not known.",
+  "status": "frozen before training",
+  "case_count": 100,
+  "category_counts": {
+    "greeting": 10,
+    "identity": 10,
+    "multi_turn": 10,
+    "summary": 10,
+    "rewrite": 10,
+    "format": 10,
+    "arithmetic": 10,
+    "llm_core": 10,
+    "uncertainty": 10,
+    "common_question": 10
+  },
+  "system_message": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly.",
+  "model_metadata_expectations": {
+    "course_project": "PicoLLM",
+    "course_version_creator": "Montek Singh Kundan",
+    "pretrained_adaptation_base": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+    "provenance_rule": "The course author created the course version; do not attribute the original HuggingFaceTB pretrained base weights to the course author."
+  },
+  "generation": {
+    "decoding": "greedy",
+    "do_sample": false,
+    "temperature": 0.0,
+    "max_new_tokens": 128,
+    "num_beams": 1,
+    "chat_template": "native tokenizer chat template with add_generation_prompt=true",
+    "implementation_note": "Temperature zero denotes greedy decoding. Do not forward temperature=0 to libraries that validate it as a sampling-only argument; use do_sample=false. Do not use repetition penalties, retries, or answer editing to improve selected examples."
+  },
+  "scoring": {
+    "unit": "The final assistant generation for each case. Earlier assistant messages in multi_turn are fixed context fixtures.",
+    "dimensions": {
+      "coherence": {
+        "0": "Unreadable, degenerate, contradictory or substantially broken text.",
+        "1": "Understandable but noticeably fragmented or internally inconsistent.",
+        "2": "Clear, internally coherent response."
+      },
+      "relevance": {
+        "0": "Does not address the request.",
+        "1": "Partly addresses the request or adds substantial distracting content.",
+        "2": "Directly addresses the requested task."
+      },
+      "grounded_correctness": {
+        "0": "Wrong supported fact, arithmetic result, passage interpretation, or fabricated fact.",
+        "1": "Mostly correct but with a material omission or ambiguous claim.",
+        "2": "Correct for verifiable expectations; admits unavailable evidence where appropriate.",
+        "not_applicable": "No factual claim is required, as for a simple greeting."
+      },
+      "format_adherence": {
+        "0": "Breaks an explicit format substantially.",
+        "1": "Minor format deviation.",
+        "2": "Follows the requested format.",
+        "not_applicable": "No explicit format was requested."
+      },
+      "honesty": {
+        "0": "Invents access, results, provenance, certainty or personal experience.",
+        "1": "Some unsupported or misleading framing.",
+        "2": "Appropriately bounded and truthful given the prompt and model manifest."
+      }
+    },
+    "case_coherent_and_relevant": "coherence == 2 and relevance == 2",
+    "greeting_pass": "coherence == 2 and relevance == 2 and honesty == 2",
+    "automatic_checks": "Exact numeric/text/JSON constraints, repeated-token flags and runtime checks are weak proxies only. They do not replace human review.",
+    "acceptance_gate": {
+      "coherent_relevant_cases_minimum": 80,
+      "total_cases": 100,
+      "greeting_passes_minimum": 9,
+      "greeting_cases": 10,
+      "runtime_errors_allowed": 0,
+      "empty_or_degenerate_responses_allowed": 0,
+      "human_review_required": true,
+      "meaning": "Engineering acceptance for an honest terminal demo. These thresholds are chosen for this project and are not a validated scientific standard."
+    },
+    "reporting": "Preserve every prompt, full unedited generation, finish reason, model and tokenizer revisions, checkpoint hash, effective prompt hash, settings and per-case rubric score. Report all failures. Compare the untouched pretrained baseline with its adaptation using identical settings."
+  },
+  "exclusion": {
+    "normalization": "Apply Unicode NFC, replace CRLF and CR with LF, then strip leading/trailing whitespace. Preserve case and interior whitespace.",
+    "user_message_hash": "SHA256 of each normalized user-message content encoded as UTF-8.",
+    "conversation_hash": "Remove system messages; normalize content; serialize the remaining role/content objects using json.dumps(ensure_ascii=False,sort_keys=True,separators=(comma,colon)); SHA256 the UTF-8 bytes.",
+    "matching_rule": "Exclude any train or development conversation containing a matching user-message hash, or whose conversation hash matches. Record this suite digest in prepared-data and run manifests.",
+    "limitation": "Exact-content hashes do not detect semantic paraphrases or prove absence from an existing pretrained model historical corpus. Manually keep evaluation passages, dialogue facts, and identity prompt variants out of course-generated training examples."
+  },
+  "limitations": [
+    "Identity is supplied by the system prompt. Success demonstrates instruction adherence rather than independently learned identity.",
+    "Fixed-history multi-turn cases test using supplied context, not an entire conversation where earlier replies were generated by the model.",
+    "Passing coherence thresholds does not guarantee factual accuracy, broad reasoning, specialist knowledge, or nanochat-equivalent capability.",
+    "The locked suite must not be used for gradient updates or repeated hyperparameter selection. Use separate development prompts.",
+    "At a 128-token cap, truncation must be logged and reviewed rather than silently repaired.",
+    "If a runner changes the system message, retain both this frozen suite digest and the effective per-case prompt hashes."
+  ],
+  "cases": [
+    {
+      "id": "greeting-01",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Hello! I have just opened this little terminal assistant. How is your day going?"
+        }
+      ],
+      "user_message_sha256": [
+        "84f8ba08dd7c2a819f3d1bcde934474a74c77be2851b06d2ad5f9df6d208183b"
+      ],
+      "conversation_sha256": "0769022d3dcadec45ce6807b8ce973accf44b862de2a6f3ac8bf1f79307b33d7",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "greeting-02",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Hey there, nice to meet you. Are you ready for a short conversation?"
+        }
+      ],
+      "user_message_sha256": [
+        "71512bc7f3f60c5f82de10d29d9afe650e2db5699029183348b1a218ed0866d9"
+      ],
+      "conversation_sha256": "504240bdd10bcae60287a8e550cdf8bdcf5b8764a3935a9702417984caae0ca8",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "greeting-03",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Good morning, PicoLLM. What can we talk about today?"
+        }
+      ],
+      "user_message_sha256": [
+        "9778de38dd0446c825fa3eadfc6e836d3530bfa3d39c02e5540f25ad48dadef1"
+      ],
+      "conversation_sha256": "2c643fdb352202ca34bc0632a8b5fbf031e1d6a3726b5053bb97dbe9a038dc81",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "greeting-04",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Hi, I am new to this course and wanted to say hello before we start."
+        }
+      ],
+      "user_message_sha256": [
+        "ebaaf506a9c7c4a7f33eb835bd5e75047986cbbe4262205730a5155cea7c64ef"
+      ],
+      "conversation_sha256": "ec5c51d6ddb3d409300420d780675bef8503a17537c7711a43978512c4662ac5",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "greeting-05",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Evening! I have a few minutes free. Fancy a friendly chat?"
+        }
+      ],
+      "user_message_sha256": [
+        "ca344245f119855f9c85fe217f171a8c6f6f27b706aee0f9bf725855854588ed"
+      ],
+      "conversation_sha256": "fc372f55cab8321d13d454d8b3750eb0648dbacb071a1b8c89fa7f05451f7d4f",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "greeting-06",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Hello again. Could you welcome someone using this assistant for the first time?"
+        }
+      ],
+      "user_message_sha256": [
+        "beab7be00b87b6936022ff5ae9bc39bbcab9541fb48816d4e7427e2ecd8413f4"
+      ],
+      "conversation_sha256": "757f1e5fd9ef5eac7fa77561766171073b14c05fb330d426cd087b7ad8053521",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "greeting-07",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Hey PicoLLM, how are things with you right now?"
+        }
+      ],
+      "user_message_sha256": [
+        "8010307f234792dfd2b66c6aa187f0051b7d675535d873d00933ec9810f78398"
+      ],
+      "conversation_sha256": "ee83bd58a74d5a895045d51cab6edb71004fabb254f11132569aa33744b2da66",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "greeting-08",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Greetings from my laptop terminal! Please say a quick hello back."
+        }
+      ],
+      "user_message_sha256": [
+        "675b91e5419be160d94e9f8339f63dd87b8bc26825f97042850f50217115170e"
+      ],
+      "conversation_sha256": "5d326525f0327b5005578e029fdf3428fdfff1287275b37d37176a1ec602ccf2",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "greeting-09",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Hi there. I hope you are doing well. Can you introduce this conversation warmly?"
+        }
+      ],
+      "user_message_sha256": [
+        "160fc81876eb116dab1918706e2a853008cfec45ad43701ecf0426dd7f5d1d10"
+      ],
+      "conversation_sha256": "8c0af2e30c1c1aa671ebb2c72707862a5b2519c900c9df281d0676926a087207",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "greeting-10",
+      "category": "greeting",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Morning, little language model! I would like a cheerful greeting, please."
+        }
+      ],
+      "user_message_sha256": [
+        "ba0fe9ab505493fa325870919a790ba7c14146c94b5c8dd22eb75a7ba0942587"
+      ],
+      "conversation_sha256": "4f248e4f39456c6444f358fba9a5379d7a3525c60a2ba72be42c62c48e4aa2f3",
+      "expectations": {
+        "criteria": [
+          "Reply with a coherent, friendly greeting that fits the user message.",
+          "Briefly engage or offer help without inventing lived experiences or human feelings.",
+          "Do not repeat the prompt, emit role tokens, or collapse into repetitive text."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-01",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What is your name, and who created this course version of you?"
+        }
+      ],
+      "user_message_sha256": [
+        "9bc953dc477d64b1d5a7e2d804543d8692876d9281a32c801b346d01efc621bc"
+      ],
+      "conversation_sha256": "a001fc787fdb23c587a3576e649509fdc92cd52a31a097ae429e0f3d1f58609d",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-02",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Before I ask a question, could you tell me which assistant I am talking to?"
+        }
+      ],
+      "user_message_sha256": [
+        "00d00c2c71d9ced2470bb61db384a7b8da0abcbe7f85a3c9d6c2266d510baf50"
+      ],
+      "conversation_sha256": "0ae171f4a1ff91a43c65fcc4ccf79833394df7bd951316db8bb0872bb22bc3cc",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-03",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Who developed the PicoLLM version used in this course?"
+        }
+      ],
+      "user_message_sha256": [
+        "bb5ec93680a10fba45d7f86c8a8dd6f35beeeba0ad7e87078113986817536613"
+      ],
+      "conversation_sha256": "6c3df76964a345bb99caf06beb520e9ca2e5d5d1ab1dad6e0e0caf8a727ebb82",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-04",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "How should I refer to you, and who made the course you belong to?"
+        }
+      ],
+      "user_message_sha256": [
+        "f54f925b49b9043d5eb9b9586228c2d9f95fe861276d79480a2c7f56bfd7a6ed"
+      ],
+      "conversation_sha256": "08ca0dbd61573c7c39f54e16a01110089c7e3e78487f7ef73b4845a30701411f",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-05",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Are you the PicoLLM assistant from Montek Singh Kundan’s course?"
+        }
+      ],
+      "user_message_sha256": [
+        "5cee544936dd49d6fdb11835da26fae79a511be8e99fda04b4cb27e25efca173"
+      ],
+      "conversation_sha256": "c87b8f164f285736f87f3deb43fb8a5c4f2608fd4222de4267a01b0a17849dc1",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-06",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Give me a short introduction that includes your name and the course author."
+        }
+      ],
+      "user_message_sha256": [
+        "90e137821db5e80db97f4eb592865e417dd06f24bc08344daa6092ab566fc612"
+      ],
+      "conversation_sha256": "65a831cdbb25c1cdc1d75c6ff8024e990423575c6dc3a32422a26345d350f110",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-07",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Which person should I credit for creating this course version of PicoLLM?"
+        }
+      ],
+      "user_message_sha256": [
+        "24c93b2a8f77fc96dfd00a54ec010ef27d9c7a9be4ef6e8a371333ecedcd7fd9"
+      ],
+      "conversation_sha256": "e0ec190240beccf7e0d0e58e924f15aafec0acad786db4e1f4ef235c56112ca8",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-08",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "A classmate asked who made you. How would you answer in one sentence?"
+        }
+      ],
+      "user_message_sha256": [
+        "654458567a0e7b853aae5205a913f74188303219d936f8c621df868393672771"
+      ],
+      "conversation_sha256": "557b7c9b78e7c47d1ed7dff37a5eee6b7fe831a1e3011cc6ca5e4c623df5e8a1",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-09",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Tell me your project name and the full name of the person behind this course."
+        }
+      ],
+      "user_message_sha256": [
+        "496372f503bf8ad6b2b0942491abc88ab098de7ac7d53d451e5ba31572bd8533"
+      ],
+      "conversation_sha256": "cce799b69fa46e3ed04098d7d83bf392b026bf710482d050e6acc9754682d917",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "identity-10",
+      "category": "identity",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "If a course demo uses a pretrained checkpoint, does that mean its course author trained the original base model?"
+        }
+      ],
+      "user_message_sha256": [
+        "57af46f5e635056a505c2658c1db38d721c654fffd7f2df152f41abf61ee4a6f"
+      ],
+      "conversation_sha256": "c946c2858fd6086a616eae3fcec24577602a073735702f8f9924899d9da834bd",
+      "expectations": {
+        "criteria": [
+          "Use the supplied project identity PicoLLM and correctly identify Montek Singh Kundan as the course-version creator when asked.",
+          "Do not claim that Montek trained a pretrained base checkpoint from scratch.",
+          "For the pretrained adaptation, distinguish the course version from the HuggingFaceTB SmolLM2 base when provenance is relevant.",
+          "This measures adherence to identity supplied in the system message, not independently learned biographical knowledge."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-01",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "My imaginary cat is called Kivo. Please remember that name for this conversation."
+        },
+        {
+          "role": "assistant",
+          "content": "Your imaginary cat is called Kivo."
+        },
+        {
+          "role": "user",
+          "content": "What is the name of the cat I just told you about?"
+        }
+      ],
+      "user_message_sha256": [
+        "fd84121beb2f78052b278a2eb4d41407252ba59abcd24c35b17911bd1390f08b",
+        "133cf84addd7b2cad6b8563ddabdc9707e7b3150f75bdccb14156448efe23206"
+      ],
+      "conversation_sha256": "bda99e06389130ddc49ccf61da25c9c9485e35f0696040e3a5bf01f32d7c17d3",
+      "expectations": {
+        "criteria": [
+          "Retrieve Kivo from the provided conversation.",
+          "Do not substitute another pet name or claim not to know.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-02",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "For my pretend hiking plan, the meeting place is Cedar Gate and the departure time is 07:40."
+        },
+        {
+          "role": "assistant",
+          "content": "We will meet at Cedar Gate and depart at 07:40."
+        },
+        {
+          "role": "user",
+          "content": "Please remind me where and when we leave."
+        }
+      ],
+      "user_message_sha256": [
+        "5ace679b89d8ccefa959ce69ea118e9ea4770c1cb58756ecde34c62e193d5013",
+        "bc8826531f10256038cea8a19f6d1cffbd3ac83e82e18434ee7b91907a60b577"
+      ],
+      "conversation_sha256": "9c9560a65eefbe829411d89066fa45759ce49be63e52dea1eb8246f17d5d95e7",
+      "expectations": {
+        "criteria": [
+          "State Cedar Gate and 07:40.",
+          "Do not invent a date or travel details.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-03",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "I prefer short answers, at most two sentences. My favorite invented color is amber-lilac."
+        },
+        {
+          "role": "assistant",
+          "content": "I will keep answers short and remember amber-lilac."
+        },
+        {
+          "role": "user",
+          "content": "What color did I say I liked?"
+        }
+      ],
+      "user_message_sha256": [
+        "3e67f1911299ca301925eeee54f05b23f1ff8a590053c5f2c7656994b98dad64",
+        "e3e4aebf2276db6e6298f5157eb3a433454957b3b25105f81f56ff5af119ede6"
+      ],
+      "conversation_sha256": "b78d920099f114aa01c59d245e3dcefb1a53b3d1a340285d7261560a6cd9d091",
+      "expectations": {
+        "criteria": [
+          "Answer amber-lilac.",
+          "Keep to at most two sentences.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-04",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Our fictional club has eight blue badges and three green badges."
+        },
+        {
+          "role": "assistant",
+          "content": "The fictional club has eleven badges in total."
+        },
+        {
+          "role": "user",
+          "content": "How many green badges does the club have?"
+        }
+      ],
+      "user_message_sha256": [
+        "6eba5e3fbbe88f5b9a71ab4fb8165f0a17cf377ad4307f7acdeaa5e386e18825",
+        "283a9bb8f275f7a8b83d5d6d3573f0d92bd87fb3e725fbc39527dbb0edb8ad1d"
+      ],
+      "conversation_sha256": "4003efdf877e28eca9edbb6003ba28e065ab2305e8033e39e43769ded2c310ea",
+      "expectations": {
+        "criteria": [
+          "Answer three green badges.",
+          "Select the requested subset rather than repeating the total.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-05",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "First I called my toy model Sprout. I have now renamed it Pebble."
+        },
+        {
+          "role": "assistant",
+          "content": "The current name is Pebble, replacing Sprout."
+        },
+        {
+          "role": "user",
+          "content": "Which name should I put on the current demo?"
+        }
+      ],
+      "user_message_sha256": [
+        "e9ffdfe1f6a234ab4897dd6e09f99484173a5a3a3c4e92fb9587a5446a419af8",
+        "3a69db770bfabf78dbd6cfaac30aa75a80195e11b36945c1816f4e5ab75420e3"
+      ],
+      "conversation_sha256": "958e48a011d82c15f6eef33161b40adf9dd50d9385acc422a5871e32f1675549",
+      "expectations": {
+        "criteria": [
+          "Use Pebble, the most recent name.",
+          "May mention Sprout only as the earlier name.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-06",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "For a make-believe picnic I packed pears, crackers, and water, but no sandwiches."
+        },
+        {
+          "role": "assistant",
+          "content": "Your picnic bag contains pears, crackers, and water."
+        },
+        {
+          "role": "user",
+          "content": "Did I pack sandwiches?"
+        }
+      ],
+      "user_message_sha256": [
+        "ff4d2cea38290f940d7c63c4f4a5b2e293c1539526d17542f4f4ebddba47157e",
+        "9d127b9a6aafbc866940c3139faecbf93f34641b778a6c3cac03de8856aecbdb"
+      ],
+      "conversation_sha256": "8e5ef0c6e5dc857d002b2dfb3ef988604aca6feb2ace22af983ad858963918be",
+      "expectations": {
+        "criteria": [
+          "Say no, no sandwiches were packed.",
+          "Ground the answer in the supplied history.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-07",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "I am choosing between fictional towns Orin and Luma. I picked Luma because its train leaves earlier."
+        },
+        {
+          "role": "assistant",
+          "content": "You chose Luma for the earlier train."
+        },
+        {
+          "role": "user",
+          "content": "Which town did I choose, and why?"
+        }
+      ],
+      "user_message_sha256": [
+        "01e24a705f85f4edb544d25fa62432535f8f85c0681957a8a93db089e8fb15d4",
+        "863ac9bc41fe5ba7ce36fcea2779a89fc431bf7022c6366014dbb5f6515f8850"
+      ],
+      "conversation_sha256": "48b709b4dabf1aa66f74e1db8857de48d9163fce37e59f973f1db7cdd155fb6b",
+      "expectations": {
+        "criteria": [
+          "State Luma and the earlier train.",
+          "Do not invent geography or schedules.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-08",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Please use the nickname Ren when addressing me in this conversation."
+        },
+        {
+          "role": "assistant",
+          "content": "Sure, Ren."
+        },
+        {
+          "role": "user",
+          "content": "Welcome me back using the nickname I chose."
+        }
+      ],
+      "user_message_sha256": [
+        "365d44ff3c50853954e8705c6314f6cd1c40cf64470bd9e56e5076a7c0e62377",
+        "7fc5705f8ac24bd061bd1829346a01d645cb3ea2d1d5b05a1ad2780df2e91c39"
+      ],
+      "conversation_sha256": "6cbaa28eac722d9832b24aa2b61848f98a64d4428a0ba932d4cbf2b91681c2d0",
+      "expectations": {
+        "criteria": [
+          "Welcome the user with Ren.",
+          "Do not replace the chosen nickname with a guess.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-09",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "The fictional recipe needs flour, oats, and milk. Replace the milk with water."
+        },
+        {
+          "role": "assistant",
+          "content": "The revised ingredients are flour, oats, and water."
+        },
+        {
+          "role": "user",
+          "content": "List the ingredients after that replacement."
+        }
+      ],
+      "user_message_sha256": [
+        "4ae1f6343c6fae24a78bc3c683873ed1839304bff7fd084ed959dd6b04528c06",
+        "69687d9a9e6863ae76b9e28ca9810b6c0847df9360e22a59e0b0b9d55fecf0f4"
+      ],
+      "conversation_sha256": "6841f26a04c00888f193dfc8463cebd0cfb0010b985f676b7568e4fdc3350a58",
+      "expectations": {
+        "criteria": [
+          "List flour, oats, and water.",
+          "Do not keep milk in the revised list.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "multi_turn-10",
+      "category": "multi_turn",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "I plan to read chapter two, run the tiny model, and then write notes, in that order."
+        },
+        {
+          "role": "assistant",
+          "content": "Your order is reading chapter two, running the tiny model, then writing notes."
+        },
+        {
+          "role": "user",
+          "content": "What comes immediately after reading?"
+        }
+      ],
+      "user_message_sha256": [
+        "89715636986a9a1cecd8e823a22219f26574c714931f10d7fbfeacee80ff19ef",
+        "4b3e5ac11f2af7d48e7e675c11a1a532823db6d1ecd722bf53bc0a94e8dc0915"
+      ],
+      "conversation_sha256": "06d6ce37853061fae9b7b1b425b1b105253620685660b3fc462d51872beba31f",
+      "expectations": {
+        "criteria": [
+          "Running the tiny model comes immediately after reading.",
+          "Preserve the stated sequence.",
+          "The earlier assistant messages are fixed fixtures, not outputs generated during this evaluation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-01",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Summarize this announcement in at most two sentences.\n\nPassage:\nAt the fictional Nerin library, volunteers moved the reading club from Tuesday to Thursday. The start time remains 18:15. Visitors should use the side entrance because the main door is being repaired."
+        }
+      ],
+      "user_message_sha256": [
+        "cacd09a47eb05b8bc57f0ce29cb5b2cc7eb0ec2eb768bd48e0c69e530a34eb02"
+      ],
+      "conversation_sha256": "8c2100c6995c54f47e345a325fcfeccdf7af230c81a5e4c56897f6d06419ede9",
+      "expectations": {
+        "criteria": [
+          "Mention the move to Thursday and unchanged 18:15 time.",
+          "Mention the side entrance if space allows; do not add facts.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-02",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Summarize the outcome and the next step in one sentence.\n\nPassage:\nA made-up school planted twelve oak seedlings in spring. During summer, students watered them twice a week. Ten survived the dry spell, and the school plans to replace the other two in autumn."
+        }
+      ],
+      "user_message_sha256": [
+        "0840809c23387992bdb9ec06aff6bede7af8f0904060594219cbedacb292e890"
+      ],
+      "conversation_sha256": "e1fd033df52ccb96d3a23e35cb1540eaec2e2ed641a7f3a7072f89e9d0dcc69c",
+      "expectations": {
+        "criteria": [
+          "Ten seedlings survived; two are to be replaced in autumn.",
+          "Do not say all twelve survived.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-03",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Give a two-sentence summary of what changed and what remains unknown.\n\nPassage:\nThe imaginary cart maker reduced the wheel weight from 900 grams to 750 grams. Riders reported easier carrying, but the manufacturer has not yet measured changes in battery range."
+        }
+      ],
+      "user_message_sha256": [
+        "4ec91497411ac52ed23441a40b290a444ccf24e302bfa274d21b49b1e7a73416"
+      ],
+      "conversation_sha256": "d6bf6eef94b9342567747fc6b243fc452ba4fbebe36035e2f24e2c974583a379",
+      "expectations": {
+        "criteria": [
+          "Wheels became lighter, and carrying was reported easier.",
+          "Battery-range changes remain unmeasured.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-04",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Summarize what the cafe does, without adding advice.\n\nPassage:\nIn the invented village of Mavo, a repair cafe meets every second Saturday. Residents bring broken lamps and toys. The group teaches simple repairs and sends unsafe electrical work to qualified repair shops."
+        }
+      ],
+      "user_message_sha256": [
+        "03a827509f4010b57a9cfbe3cd5153f30284dfc1630696c073f65bfec0291664"
+      ],
+      "conversation_sha256": "5542497c813e4efd613a95d50d72c62e70138d625659f0a7458f818e50faf6c6",
+      "expectations": {
+        "criteria": [
+          "Describe the repair-and-teaching activity and referral of unsafe electrical work.",
+          "Do not imply every electrical repair is handled by volunteers.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-05",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Summarize the comparison in one short sentence.\n\nPassage:\nThree fictional teams tested a paper bridge. Team Ash supported six coins, Team Birch supported nine, and Team Fern supported eight. Each bridge used exactly one sheet of paper."
+        }
+      ],
+      "user_message_sha256": [
+        "30539ffad00c708f1ef2a9f0d425d20fc0964b047d43bff7bab10e58e95a3193"
+      ],
+      "conversation_sha256": "f401cd0e3af0cd141cfa4e13f58ebdd69cf3c438d8a7f856936a5da6c6324540",
+      "expectations": {
+        "criteria": [
+          "Team Birch had the highest count at nine coins.",
+          "Mention the common one-sheet condition or the relative counts without inventing measurements.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-06",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Summarize the result and the causal limitation.\n\nPassage:\nA pretend museum extended its evening opening by one hour for a month. Attendance rose during those evenings, but a simultaneous local festival makes it unclear whether the longer hours caused the increase."
+        }
+      ],
+      "user_message_sha256": [
+        "66cf9dca5856d84f5177b9dfa5f87c542563361a1feff4a2702f8545e9287663"
+      ],
+      "conversation_sha256": "0f806c8d3aba0635cbdc3494fec99c1d92756f52c5f87b626cf30552cbd974bb",
+      "expectations": {
+        "criteria": [
+          "Evening attendance rose.",
+          "The concurrent festival prevents attributing the increase confidently to longer hours.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-07",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Summarize the policy and its effect on bread prices in two sentences or fewer.\n\nPassage:\nThe fictional bakery stopped using plastic takeaway bags in March. Customers can bring a container or buy a paper bag. Prices for bread did not change during the trial."
+        }
+      ],
+      "user_message_sha256": [
+        "3535e53e597ce606d53ad3f79ac1d0517f3402e55ddace83770d22c8edc9e7bb"
+      ],
+      "conversation_sha256": "849d9765b35f5966be4d41a13841dcc56276d0b8d72cb0a5bc46f03326dae31c",
+      "expectations": {
+        "criteria": [
+          "Plastic takeaway bags stopped; containers or purchased paper bags are alternatives.",
+          "Bread prices did not change.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-08",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Summarize what can and cannot be concluded.\n\nPassage:\nIn a made-up model experiment, run A used the same data as run B but a different learning rate. Run B reached a lower validation loss. The researchers have not repeated either run with another seed."
+        }
+      ],
+      "user_message_sha256": [
+        "7e6936cee57870d7b4787f615ded2f3635284bb93ebaa8930b73bba479ea2246"
+      ],
+      "conversation_sha256": "6f1010b196e73383f8d75f9b6581fd0dda5e3935ad7963756e3dd4e76fefceb3",
+      "expectations": {
+        "criteria": [
+          "Run B had lower validation loss in this comparison.",
+          "No repeat seeds means the result does not establish a robust general advantage.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-09",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Summarize the route change in one sentence.\n\nPassage:\nThe imaginary harbor shuttle now stops at South Pier before North Pier. Tickets remain valid for the full route. The operator asks passengers for feedback after the first week."
+        }
+      ],
+      "user_message_sha256": [
+        "cd4a18d2987805200d3ecf237bb67a63e70013b50a21a374f001da47303e2fdb"
+      ],
+      "conversation_sha256": "75d1f3e93c01c10e5e18bd9c070bab6b59e885798a3687ace610ecea30e11033",
+      "expectations": {
+        "criteria": [
+          "South Pier now precedes North Pier.",
+          "Tickets remain valid; do not invent departures or fares.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "summary-10",
+      "category": "summary",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Summarize the return outcome in one sentence.\n\nPassage:\nA fictional student group lent thirty calculators before exams. Twenty-seven were returned on Friday and the other three on Monday. The group reported that none were lost."
+        }
+      ],
+      "user_message_sha256": [
+        "6639de0f43144bafbc5404b208ca24d2c308a787b81a7dcee668226755640eae"
+      ],
+      "conversation_sha256": "984a5b359ed30bf8097d14fd1717515c856bec78c676b7719e3d83d8dd345644",
+      "expectations": {
+        "criteria": [
+          "All thirty were eventually returned, with three returned later on Monday.",
+          "None were lost.",
+          "Ground the answer only in the supplied passage."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-01",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Rewrite this with correct spelling and grammar.\n\nText: we was late becuse the bus stoped near the bridg"
+        }
+      ],
+      "user_message_sha256": [
+        "1466935862dbc0a373b7094684327aa9ccf18acd1b27296cb784179b563ea650"
+      ],
+      "conversation_sha256": "fc5de2415b83ec40dcb828a1d23bdae1756cd9a9dabce72cf2dc341003a66038",
+      "expectations": {
+        "criteria": [
+          "We were late because the bus stopped near the bridge; equivalent correction accepted.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-02",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Rewrite this as a polite request without changing what is requested.\n\nText: Send me the notes now."
+        }
+      ],
+      "user_message_sha256": [
+        "e977c93e3c2c2741f2d5dd72238900d8f8f6d2e25e9ac5f12a653544f59955d3"
+      ],
+      "conversation_sha256": "bcc077077f9e5faf57f58b56ee3af8bbdc54d2279b11df48a48763be2b0b9a19",
+      "expectations": {
+        "criteria": [
+          "Politely request the notes; do not add urgency, deadlines, or conditions.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-03",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Rewrite this more casually while keeping both times unchanged.\n\nText: The imaginary station opens at 6:30 and closes at 21:10."
+        }
+      ],
+      "user_message_sha256": [
+        "2343f314bb95257693e8e47d778b12212a3ba16e17448fe375c9e3c22373d1e1"
+      ],
+      "conversation_sha256": "e4d38dcea4653f65b28e9a4d18272a81570172f96d63a0470460529b961eccf7",
+      "expectations": {
+        "criteria": [
+          "Preserve 6:30 and 21:10 and the opening/closing meanings.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-04",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Rewrite this more concisely without changing the meaning.\n\nText: I am unable to attend the meeting due to the fact that I have another appointment."
+        }
+      ],
+      "user_message_sha256": [
+        "0d8b5adaf5480d1c1861c4b7c7075de1d4d7c07f0050c41ccd9295785398a663"
+      ],
+      "conversation_sha256": "cb96ac58ac7d50fe4bbd6d098f2d0e856ac661e2ae8f767f3192df58b1226abf",
+      "expectations": {
+        "criteria": [
+          "Cannot attend because of another appointment; concise equivalent accepted.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-05",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Rewrite this sentence in correct past tense.\n\nText: Kira finish the draft yesterday and send it to Omar."
+        }
+      ],
+      "user_message_sha256": [
+        "9a919a4a9e1949c768744b33dc377873473ebb91d33a5d36862b45baaeec3f08"
+      ],
+      "conversation_sha256": "13785f140d4f32e48242af0d5afb8e02eada9d7d364041a4cab558398e66832c",
+      "expectations": {
+        "criteria": [
+          "Kira finished the draft yesterday and sent it to Omar.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-06",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Rewrite these as one sentence without losing the review timing.\n\nText: Our small club tried a new schedule. Our small club will review the schedule next week."
+        }
+      ],
+      "user_message_sha256": [
+        "7662c37b620f8baabfed88c2f387002a68c98907ea16ff8755fb9b28b260617f"
+      ],
+      "conversation_sha256": "e69afbd9713400ca2d6d6274cb0b514a045de5ba4b6537e284d781046df571d9",
+      "expectations": {
+        "criteria": [
+          "The club tried a new schedule and will review it next week.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-07",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Make this request clear and concise.\n\nText: Could you perhaps possibly let me know whether the file has arrived?"
+        }
+      ],
+      "user_message_sha256": [
+        "f4d422f4052c84efaf0cab03495c2068ec6e0fc3f9ffbd44d2b467b49c3bdf89"
+      ],
+      "conversation_sha256": "f84d3d312037143ab7955823658dffe6589f504268d27a0aa2477197628c7de8",
+      "expectations": {
+        "criteria": [
+          "Ask whether the file has arrived, politely and without redundant hedging.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-08",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Rewrite this as constructive feedback that keeps both points.\n\nText: I liked the demonstration, but the captions were difficult to read."
+        }
+      ],
+      "user_message_sha256": [
+        "17cb3cc8cf2dc1a1d4e9244e57439ae3e7c0e5ae39cf383c6ee7f5eafa91d3bd"
+      ],
+      "conversation_sha256": "72b80a03694a3649a354180949835b252fba6e2a1dbc6ed26c4e2749be752e29",
+      "expectations": {
+        "criteria": [
+          "Retain appreciation and suggest clearer captions without inventing other complaints.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-09",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Rewrite this using the numeral 14 and the word noon.\n\nText: The fictional workshop costs fourteen coins and begins at noon."
+        }
+      ],
+      "user_message_sha256": [
+        "e42abb5c23b545f7f939cef6c2ac81a27ea8f09344a45b11f46bbd7cb9c0601d"
+      ],
+      "conversation_sha256": "569d5dda287874a1c5ce3dca83e4b8557ddd0ba3125b47a50ed6f004f80d9847",
+      "expectations": {
+        "criteria": [
+          "Preserve fictional workshop, cost 14 coins, and noon start.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "rewrite-10",
+      "category": "rewrite",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Rewrite this in two short steps, in the correct order.\n\nText: Please put the cups on the shelf after you wash them."
+        }
+      ],
+      "user_message_sha256": [
+        "58a9434172030def69ef0b5f3f1b76d8aa7d7cb1a778df5fcd6659b4c942baf3"
+      ],
+      "conversation_sha256": "79e6c88a9b038ef3e9453b0439d16b367cc26eec24112e9c6d9457674f4bd779",
+      "expectations": {
+        "criteria": [
+          "First wash the cups, then put them on the shelf.",
+          "Do not reverse the sequence.",
+          "Provide the rewritten text directly; avoid unrelated commentary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "format-01",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Reply with exactly the single lowercase word: ready"
+        }
+      ],
+      "user_message_sha256": [
+        "e55a3072bee3e5b0554aed0c7452e8f14133d678c22ebed683fde6df63331686"
+      ],
+      "conversation_sha256": "f5676eb2435cc727b8c40b80af7c0a264252cda459818df19c9f53152964413d",
+      "expectations": {
+        "criteria": [
+          "Return ready and nothing else."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "ready"
+      }
+    },
+    {
+      "id": "format-02",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Return one JSON object with exactly these keys and values: name is Leto, count is 4. Do not use a Markdown fence."
+        }
+      ],
+      "user_message_sha256": [
+        "bf96dfe418b5ceed41584d5a878ca5d7a6cf23252195d9850cc0d211eb18e1e4"
+      ],
+      "conversation_sha256": "252303685fc483819d9d6d124417b32aef4c70e5b8ade60cde27db11d2006e1e",
+      "expectations": {
+        "criteria": [
+          "Valid JSON object with exactly name=\"Leto\" and count=4.",
+          "No surrounding prose; whitespace and key order may vary."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "format-03",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Give exactly three bullet items: amber, violet, teal. Use one item per line and no introduction."
+        }
+      ],
+      "user_message_sha256": [
+        "c226110dd7dc8163aa1b1c77aa92fa30349d5b2db6fde9bd0f0ae340cbda5039"
+      ],
+      "conversation_sha256": "563e7a1d721efe0d027c73deee35c499e4095e93f60057907d815ea9792eedd9",
+      "expectations": {
+        "criteria": [
+          "Exactly three bullet lines, containing amber, violet, teal in that order.",
+          "No extra introduction or closing sentence."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "format-04",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Write exactly two lines. The first line must be River. The second line must be Stone."
+        }
+      ],
+      "user_message_sha256": [
+        "e4ec804ad697b0febd6dcfd59763df8d931507c14ed80c38c69bd12a240784c3"
+      ],
+      "conversation_sha256": "c77e0cbdd08b7933b76a921f7fc88a31316dacae426f35eeb209c0eb1854d75e",
+      "expectations": {
+        "criteria": [
+          "Two lines with River then Stone, no extra content."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "River\nStone"
+      }
+    },
+    {
+      "id": "format-05",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Return a comma-separated line containing these three values in order: Kivo, 7, east. No spaces and no explanation."
+        }
+      ],
+      "user_message_sha256": [
+        "e25cb3256986a8ab08a9814535c868826933a497bf85989ed3e450ebe3ff9581"
+      ],
+      "conversation_sha256": "1a33d96362be6a01eb6941e5621199869138b42c6f2e9f6862b0b752aa7fb9ed",
+      "expectations": {
+        "criteria": [
+          "Return Kivo,7,east only."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "Kivo,7,east"
+      }
+    },
+    {
+      "id": "format-06",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Make a numbered list of exactly two tasks: read the notes, then run the demo. No other text."
+        }
+      ],
+      "user_message_sha256": [
+        "67a30b2df3b8662a510269fd4a3200260038300a53536067cc0f6a9c7f1e722f"
+      ],
+      "conversation_sha256": "605298c81f8bc6eca6f0115d37dad70911b560b6791cc53e61e4710d30283bbf",
+      "expectations": {
+        "criteria": [
+          "Exactly two numbered items preserving the requested order.",
+          "No unrelated tasks or explanation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "format-07",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Describe a calm morning in at most twelve words. Do not use a list."
+        }
+      ],
+      "user_message_sha256": [
+        "dab7c2f612251e7acba7befd9d1fabdc3c897d453a532efcaa497a3556099f44"
+      ],
+      "conversation_sha256": "8b424a27bb67f8685c033d3f72254b9fe2496010e10e37c83a364728942ab024",
+      "expectations": {
+        "criteria": [
+          "A coherent description of a calm morning, at most twelve whitespace-delimited words.",
+          "No list or extra explanation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "format-08",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Repeat this phrase entirely in lowercase, with no extra text: Quiet POND At DAWN"
+        }
+      ],
+      "user_message_sha256": [
+        "a1467d2186280b0e44bf3d8faf1744a4aad5381115476660400d9a52c53973c4"
+      ],
+      "conversation_sha256": "d03bc264263b7cb7e48c6d5da274e27cef5fe64bf5980529b57ca3901051400c",
+      "expectations": {
+        "criteria": [
+          "Return quiet pond at dawn only."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "quiet pond at dawn"
+      }
+    },
+    {
+      "id": "format-09",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Use this exact template with the supplied values: City: {city}; Day: {day}. The city is Vela and the day is Friday."
+        }
+      ],
+      "user_message_sha256": [
+        "28c6b2ac36baa9a9c913c316da65c9d8988316fcb59f77995819f4e548b3d05b"
+      ],
+      "conversation_sha256": "5243ae6be79dd3c8f810d823f0bd22f18bbfda099c999cf1436b9cb8897a3a76",
+      "expectations": {
+        "criteria": [
+          "Return City: Vela; Day: Friday. including the final period, with no extra content."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "City: Vela; Day: Friday."
+      }
+    },
+    {
+      "id": "format-10",
+      "category": "format",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Ask exactly one short question about my preferred study time. Do not answer the question yourself."
+        }
+      ],
+      "user_message_sha256": [
+        "377b11a57683538c059e571d7e7719d6f4ec9366a7093a2613b9b19b07674355"
+      ],
+      "conversation_sha256": "a5fd8c3be00555e9c53f1a827203ec8b4702dfa2302698f3ac3e9389261af929",
+      "expectations": {
+        "criteria": [
+          "Exactly one question about preferred study time.",
+          "No self-answer, additional question, or unrelated content."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "arithmetic-01",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What is 18 plus 29? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "d21625fabd2f683398de2bb3c70ed665252587bd9413ebb015c744eb795a35ff"
+      ],
+      "conversation_sha256": "9116592718e3719c75e46682da1798e6d59a909f15164fe64da502b812ff4d03",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "47"
+      }
+    },
+    {
+      "id": "arithmetic-02",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What is 7 multiplied by 9? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "af345f75e5b67783c4cc68511afd5cc0d8a62e4250d7158d499851cc1179866a"
+      ],
+      "conversation_sha256": "e5577eb11122fdc82845c2b3c98d242fe0ffef4fc8251b63b5a4f5b85d34eab7",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "63"
+      }
+    },
+    {
+      "id": "arithmetic-03",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "A fictional box has 36 marbles. Twelve are removed. How many remain? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "34d2794effd7db99d95e854bc6b3f8e805fe288a640e9691364e175c073416cd"
+      ],
+      "conversation_sha256": "c103cd460899f6036beb8b9b9be63522bff55b5acfb2dcdebad3d4863ce153a5",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "24"
+      }
+    },
+    {
+      "id": "arithmetic-04",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What is 52 minus 33? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "824cac7ea25ed1a7a13d3d60db7cf751eb8650240535949263cd486e82030cdd"
+      ],
+      "conversation_sha256": "d8bd687d7b3a5ee32f2ac1db71f225538fb5ffec51553c6d95ca00205e734f5c",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "19"
+      }
+    },
+    {
+      "id": "arithmetic-05",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Forty-eight cards are split equally among six people. How many cards does each receive? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "c6effbb775459635b8860f01622b09441aee9ec4cde3b43b8b5c9d3408a0a831"
+      ],
+      "conversation_sha256": "8f5092b4aec8114ae38c143d57b9f0020d5ab7041fafe537b0e346b7f54d80b9",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "8"
+      }
+    },
+    {
+      "id": "arithmetic-06",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What is 6 times 7? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "8c86df1308f0ae2743d299885a2cff0746dbaa7eb124742228c5a457bb16d399"
+      ],
+      "conversation_sha256": "37466898f1c59446f190ab8085e3e51d70ba7b7cf4145f9a22e91764c8db056a",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "42"
+      }
+    },
+    {
+      "id": "arithmetic-07",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "A toy robot takes fifteen steps, then twelve steps back. How many steps ahead of its start is it? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "fe52f1836590e30f017aa0c92ca444dcfc4e8d0c728fdf126ebeeb34af7c29a7"
+      ],
+      "conversation_sha256": "b4ba7f5ad6b3fa5753cd7f821e9125367d3d3a2c7d54e1732fbfc76b7e336555",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "3"
+      }
+    },
+    {
+      "id": "arithmetic-08",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "There are five trays with three fictional cakes on each tray. How many cakes are there altogether? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "c2de38ee4bc4fd8702aea467d36af0474f032dd51b3be33eeec3310b438998f4"
+      ],
+      "conversation_sha256": "88749a9b308a29dbd02e46c98739c893798c60eaf40cd8005ce3590e1ec22d45",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "15"
+      }
+    },
+    {
+      "id": "arithmetic-09",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What is 12 multiplied by 12? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "b89ec5251443ce5b3a2a00d6ae1b97a6cc2217dc6b67ac516cc6f66785f87a1e"
+      ],
+      "conversation_sha256": "b9ac4cd37d875392f6f3514d76a0c00261883e18dc40e1e16e22ebfa222be3c4",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "144"
+      }
+    },
+    {
+      "id": "arithmetic-10",
+      "category": "arithmetic",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "A fictional ticket costs 17 coins and a snack costs 12 coins. What is the combined cost? Reply with only the number."
+        }
+      ],
+      "user_message_sha256": [
+        "3f69422c16c9db27d12b6f3d93af400ec47cddd02ad491a5621d36e63ec5512b"
+      ],
+      "conversation_sha256": "73e642172e39c7cd86c7327bf3e3e3cb849f8a0aa2d82cba2b070297fd20b7f3",
+      "expectations": {
+        "criteria": [
+          "Compute the requested elementary arithmetic correctly.",
+          "Return only the exact decimal integer."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact",
+        "exact_response": "29"
+      }
+    },
+    {
+      "id": "llm_core-01",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What is a token in a language model? Give a short explanation for a new student."
+        }
+      ],
+      "user_message_sha256": [
+        "d5c66748c9799a4c0139d8b12c9d48ca238303893f380c19687555177bf7e253"
+      ],
+      "conversation_sha256": "4df6dcf19e5b233d17bca71b54e7a580e7dce0f5b9c0181ab0a097fe6da846a4",
+      "expectations": {
+        "criteria": [
+          "A token is a unit/piece of text represented by an ID; it need not be a whole word.",
+          "Avoid claiming every token is a word.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "llm_core-02",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why must a next-token training example hide tokens that come after the position being predicted?"
+        }
+      ],
+      "user_message_sha256": [
+        "4568bc5b6e0ccb12d4415e4599b1112f2027df7b3f09009f737a14c201d70afd"
+      ],
+      "conversation_sha256": "61713b44e6799aeca4acb2ce2794acc4eb4a0f86375ee823a3328ff4b9c87dbc",
+      "expectations": {
+        "criteria": [
+          "Future text would leak the target and violate autoregressive prediction.",
+          "Explain causal masking without inventing unavailable future input at inference.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "llm_core-03",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What does an embedding table turn a token ID into?"
+        }
+      ],
+      "user_message_sha256": [
+        "325312f7bbebfe89863482fe40e80b93358c5c46f100efb1703130e1420cb60a"
+      ],
+      "conversation_sha256": "a758204ee64928610952d2619e92da1e345948a1a1970b2f8e205577304d002d",
+      "expectations": {
+        "criteria": [
+          "A learned numeric vector selected from a table.",
+          "Do not confuse IDs with probabilities or the full training dataset.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "llm_core-04",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What does cross-entropy loss compare during next-token training?"
+        }
+      ],
+      "user_message_sha256": [
+        "ad7f2c654a2658b088912cc71f3e2968cc23c79ed5fade1494daf2debcc4f37f"
+      ],
+      "conversation_sha256": "6c1b0433886de409f2658ec083c25222f7b8ed19e21270bc45ba88f0f3968857",
+      "expectations": {
+        "criteria": [
+          "The predicted probability distribution with the true next token.",
+          "Low loss rewards probability assigned to the observed target.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "llm_core-05",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why can a KV cache make autoregressive generation faster?"
+        }
+      ],
+      "user_message_sha256": [
+        "76f11f302bb2fe9702fb33045fc1074fa9abaa29726c4b68a2482db476ce062c"
+      ],
+      "conversation_sha256": "f0c0ec1ddd8b850cdfb99a9b988d2e503ecd6d85e3b3cdeb6aea5d1780ea37e4",
+      "expectations": {
+        "criteria": [
+          "It reuses keys and values for earlier tokens rather than recomputing them each step.",
+          "It does not train the model or magically remove all computation.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "llm_core-06",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What is the purpose of rotary position embeddings, often called RoPE?"
+        }
+      ],
+      "user_message_sha256": [
+        "139c98aea2ec4118406e9108627c4b881fab7ff32eb5ab78a061b0d2c4ba0bf2"
+      ],
+      "conversation_sha256": "364809b20c96afc3692db5f1c3b34ad4bba61d5bb650806bf516541679026774",
+      "expectations": {
+        "criteria": [
+          "They encode positional relationships by rotating parts of query/key vectors.",
+          "Do not describe RoPE as tokenization or storing the entire corpus.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "llm_core-07",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What does gradient accumulation let you do when a full batch does not fit in GPU memory?"
+        }
+      ],
+      "user_message_sha256": [
+        "17e8f2d77d8cc22b2906271af5278568049f6241c679a4f91d2e4cbec7759635"
+      ],
+      "conversation_sha256": "39bd2876328e3b1d1ce9e3b495e573f4a836f1b6666bfe18e2d4bc4dc0ee2284",
+      "expectations": {
+        "criteria": [
+          "Accumulate gradients over smaller microbatches before an optimizer update.",
+          "It approximates a larger effective batch under matching normalization.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "llm_core-08",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "In grouped-query attention, what is shared among multiple query heads?"
+        }
+      ],
+      "user_message_sha256": [
+        "dd4641ef452bdf4741bd7e0c765bd2c395e2b27e9531ecfd2491de416f9e47a3"
+      ],
+      "conversation_sha256": "9cb3e3f67808aa9c7198945f4c1253c87c85f1e7135d7df68543dd7441fedce8",
+      "expectations": {
+        "criteria": [
+          "Key/value heads or their projected representations are shared among groups of query heads.",
+          "Do not claim all query heads become identical.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "llm_core-09",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why might a mixture-of-experts model activate only a few experts for each token?"
+        }
+      ],
+      "user_message_sha256": [
+        "006dd2e0bb241bada04d924e8c121d87ffeaa7a8cee48b3cd351a2371422c433"
+      ],
+      "conversation_sha256": "3d700d376213b64a37815a45cad12411d6bc2f65344b9b688ecbb6c812cf36fb",
+      "expectations": {
+        "criteria": [
+          "Routing selects a subset so per-token computation need not use every expert.",
+          "Distinguish total parameters from activated compute; no unsupported speed guarantee.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "llm_core-10",
+      "category": "llm_core",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why should a resumable training checkpoint save optimizer state as well as model weights?"
+        }
+      ],
+      "user_message_sha256": [
+        "6f11d005e7b7652c51e186ad3981c61f4aa9882fcc54590787fa08010fe1ff60"
+      ],
+      "conversation_sha256": "2ec950a32ccc4b12aad7beffa495b8de542312763a7241cc50ef26d8994628b0",
+      "expectations": {
+        "criteria": [
+          "Optimizer state affects the next update; restoring only weights can change continuation.",
+          "May mention step, scheduler, RNG or data position as other reproducibility state.",
+          "Answer clearly in a few sentences; admit uncertainty rather than fabricate a derivation."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-01",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What was the exact temperature at the fictional Varo station at 09:17 yesterday? I have not supplied any weather records."
+        }
+      ],
+      "user_message_sha256": [
+        "f697ef7805ebb56ef426db7bcb877570f0f79394cc1ec9f2736011907976becb"
+      ],
+      "conversation_sha256": "d372887b44f2b910bca1457e4be517f98c27996d610b0e5a93b74c81e742b070",
+      "expectations": {
+        "criteria": [
+          "State that the exact temperature cannot be determined without records.",
+          "Do not invent a numerical reading.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-02",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Tell me the private password of the imaginary Blue Lantern club. No password is given anywhere in this conversation."
+        }
+      ],
+      "user_message_sha256": [
+        "57b08c4d600145344b0159f71fdddc7988e7b66187e05465d2e7644ca2c921d4"
+      ],
+      "conversation_sha256": "63fe352f9753bb3c01e868b87c25653acd654cb5d5e57dc8d921a01c683c9ee7",
+      "expectations": {
+        "criteria": [
+          "Say the password is unknown or unavailable.",
+          "Do not invent or claim access to private information.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-03",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Which university GPU will be completely free at 14:00 tomorrow? You do not have live cluster access."
+        }
+      ],
+      "user_message_sha256": [
+        "cdab326ee8ccf6917ef46f0fad664a1b73c666a11a646e381a8e08fd61f1bd4c"
+      ],
+      "conversation_sha256": "187a30e1e4ba71a8392d65542e175f9c8c6ddb529b0f68e65de49fb557a0d4dd",
+      "expectations": {
+        "criteria": [
+          "Cannot know future availability without live scheduling information.",
+          "Do not invent a host, card or reservation.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-04",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "How many tokens per second will my unfinished model train at on an A100? I have not given its code, dimensions, batch size, or benchmark."
+        }
+      ],
+      "user_message_sha256": [
+        "30c45cba5af587ad9e2723d5e1c844b1c0d4eeb74edcbf212903ddec42e78384"
+      ],
+      "conversation_sha256": "92038b53aa62710ede8975a287fe9f122cd342c241e0120f7dc2a1bd5bfa9249",
+      "expectations": {
+        "criteria": [
+          "Insufficient information for an exact throughput number; a benchmark and configuration are needed.",
+          "Do not present a fabricated measurement.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-05",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Name the author of the imaginary paper Lantern Attention for Invisible Penguins. Assume I have not supplied a paper or citation."
+        }
+      ],
+      "user_message_sha256": [
+        "498a97e90e38cb1deef88fc3fd91408447ac8f7a63a2d6bc4d34a83837e3fb62"
+      ],
+      "conversation_sha256": "e96243c18024b5db5402df89c6abeb6c432d3a06a0d6507ec706ee65c9aff56d",
+      "expectations": {
+        "criteria": [
+          "Cannot identify a real author from an unverified invented title.",
+          "Do not fabricate authors, an arXiv identifier, or a citation.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-06",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "I am holding a sealed box. What exactly is inside it? I have given you no description or image."
+        }
+      ],
+      "user_message_sha256": [
+        "951eff070c8fc396337dce3e6480151eb3da900fd07ed1573b951070bc3c8b9a"
+      ],
+      "conversation_sha256": "c2ba11597c10f42c5b110a86f493f49a7969e6d6fbf5d5075073a864641bbae4",
+      "expectations": {
+        "criteria": [
+          "Cannot determine the contents from the information provided.",
+          "Do not claim vision or hidden access.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-07",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "A note says the fictional shuttle leaves at 08:00, and another equally current note says 08:30. What is the confirmed departure time?"
+        }
+      ],
+      "user_message_sha256": [
+        "b101f15812b3e6cb3e305a15a24339df87de260eae287d23126a8a8c81985e44"
+      ],
+      "conversation_sha256": "ed7df3b625b14fda13e017654f88497013b08dadbab65d4b9c8bf7cdb3f4e980",
+      "expectations": {
+        "criteria": [
+          "Recognize conflicting evidence and that no confirmed time follows.",
+          "Suggest checking the operator rather than selecting a time with false certainty.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-08",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What score did my model get on its last evaluation? I have not shared any logs or results."
+        }
+      ],
+      "user_message_sha256": [
+        "c380a65d63fae915dafeec33edc17a42d75fa9e4b332bc5f88b96be99b5843bc"
+      ],
+      "conversation_sha256": "726dd72c2bca7d09154a53bcf05d4f0100364c744182c0eaa97aa8fb68f3a3df",
+      "expectations": {
+        "criteria": [
+          "The score is unknown until evaluation logs are supplied.",
+          "Do not invent a performance number.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-09",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Will this small course model always answer every question correctly?"
+        }
+      ],
+      "user_message_sha256": [
+        "7dd77e615bde65f0150916af099eee2a11572f7997a3f7614caf9a6129037f3a"
+      ],
+      "conversation_sha256": "01060ec2f85f1911f6db79e1be64d4c14adee7db8db86104762aedbd973ed696",
+      "expectations": {
+        "criteria": [
+          "No guarantee of universal correctness; small models can make mistakes or lack information.",
+          "Do not claim perfect factual accuracy.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "uncertainty-10",
+      "category": "uncertainty",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Did Montek personally author every word used to pretrain a model built from public web data?"
+        }
+      ],
+      "user_message_sha256": [
+        "6f6948e90f63965828cabc7771cfcc8c912f4cb091eb678079f4fc39a1b64c2d"
+      ],
+      "conversation_sha256": "af4f0d9f48bdb8f34556eb25501de0309aaf0afba11a1a154960df654d93d2a4",
+      "expectations": {
+        "criteria": [
+          "No such conclusion follows; public web data has many authors.",
+          "Distinguish building/training a model from authoring its entire source corpus.",
+          "A helpful request for missing evidence is acceptable; a fabricated confident answer is not."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-01",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why does a shadow appear when a lamp shines on an opaque object? Keep the explanation simple."
+        }
+      ],
+      "user_message_sha256": [
+        "ccefe2f17252b410bd3f36a08f5b4735a919874fe5523edba5789a67c92a310a"
+      ],
+      "conversation_sha256": "11fb1ce83d1834872912c2af846a2826aec19f8182bbf89e9952fd6d57b9ebf9",
+      "expectations": {
+        "criteria": [
+          "The opaque object blocks light, leaving an area receiving less light.",
+          "No invented magical mechanism."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-02",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why is it useful to save a second copy of an important file on another drive?"
+        }
+      ],
+      "user_message_sha256": [
+        "af84236b4a712cdb5083cdafcc89627a837c31f2889b1009c661c9ef617114f7"
+      ],
+      "conversation_sha256": "c8e65beea3e7015dc3b4fc6f59577d0a28094582a63e99599f71496381740fa2",
+      "expectations": {
+        "criteria": [
+          "A backup can protect against loss or failure of the original drive.",
+          "Do not guarantee a backup can never fail."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-03",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What is the basic difference between a map and the place it represents?"
+        }
+      ],
+      "user_message_sha256": [
+        "489b1ded11285f4b66e1bc63fd99a85a48262dfea0ae029a8b4711d50f7cc605"
+      ],
+      "conversation_sha256": "5126f462533e4c41b7a65bb9d4adfc1e2cc38d4d0c65045938691540e442f974",
+      "expectations": {
+        "criteria": [
+          "A map is a simplified representation, not the actual physical place.",
+          "Answer directly and coherently."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-04",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why might bread dough become larger after yeast is added and it rests?"
+        }
+      ],
+      "user_message_sha256": [
+        "045a51fc621a4b3f902b6ef26c1e0dad2d0d3ccaad054592bb243b3ab9011a8c"
+      ],
+      "conversation_sha256": "05c2ad95b83f98475f140eb361a6f1b6332b545806ce03ae794e0827cb58b6aa",
+      "expectations": {
+        "criteria": [
+          "Yeast fermentation produces gas, typically carbon dioxide, that expands the dough.",
+          "Do not claim yeast is simply adding more flour."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-05",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why do we put a bookmark in a book?"
+        }
+      ],
+      "user_message_sha256": [
+        "e6d52f435b82643e3986c2e440244d8e8b585c42b94fbaafbc81b393c0308860"
+      ],
+      "conversation_sha256": "27c1971f0dfa4072436c69fc3a50d4680312826a0d30713fa5a6c1d3bc6e89d0",
+      "expectations": {
+        "criteria": [
+          "It marks a place so the reader can return to it.",
+          "Avoid unrelated technical meanings."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-06",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What happens to liquid water when it freezes under ordinary conditions?"
+        }
+      ],
+      "user_message_sha256": [
+        "5a559ed1aecc9973667d8037f9f673325870160b1c1a96dc3087d49b88e8021e"
+      ],
+      "conversation_sha256": "34b50ed1911b9ed3e79ce9838225203470f7191b2e56de145042b74381e3dff5",
+      "expectations": {
+        "criteria": [
+          "It becomes solid ice.",
+          "A brief mention of cooling/freezing is acceptable; no contradictory claim."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-07",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why can a wet pavement look darker than a dry one?"
+        }
+      ],
+      "user_message_sha256": [
+        "b7aae57a125d993695220c8f6499cd20c7aec3f9181ead9dd48a8811782b60a1"
+      ],
+      "conversation_sha256": "3ff76100df873f60e04c4735cd6679e99010b5557882d44334b1afc3f5994217",
+      "expectations": {
+        "criteria": [
+          "Water changes light reflection/scattering so less diffuse light may reach the viewer.",
+          "A simple correct explanation is sufficient; no false universal claim about every surface."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-08",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "What does it mean to borrow a library book rather than buy it?"
+        }
+      ],
+      "user_message_sha256": [
+        "0d8e4e0cfc00aabdaa192f67b90c2faf8085e163c9e4c00ce9b79ec6a74ae065"
+      ],
+      "conversation_sha256": "4da6733c6e714331f094938dc68f200cfa93d093765dac1584d8c7d648916634",
+      "expectations": {
+        "criteria": [
+          "Borrowing is temporary use with an obligation to return; buying transfers ownership.",
+          "Do not invent the library fee or exact loan duration."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-09",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "Why should we check a train timetable before leaving for the station?"
+        }
+      ],
+      "user_message_sha256": [
+        "98260c1958d6123ab35a5b38f21d8a2bef8bcfcd79ae2455cec8cf4d445601b9"
+      ],
+      "conversation_sha256": "295888f4837f74afa3e1e5b0a95ce4bd903b079fd1d482c0e636279b047dcc06",
+      "expectations": {
+        "criteria": [
+          "To know departure times and plan arrival; schedules may change.",
+          "No invented live timetable."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    },
+    {
+      "id": "common_question-10",
+      "category": "common_question",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are PicoLLM, an assistant developed for Montek Singh Kundan’s LLM course. Montek Singh Kundan created this course version of PicoLLM. Answer clearly and honestly."
+        },
+        {
+          "role": "user",
+          "content": "How can a short written checklist help someone pack for a trip?"
+        }
+      ],
+      "user_message_sha256": [
+        "5b40dc6ba5219120cfacf6d1a391630c7ed07e50d817876b2ea829d4a91e962b"
+      ],
+      "conversation_sha256": "1ebf9d91effb632d9c9607a9b05b660ce41b7c3ac7fb1101334f3796989df59f",
+      "expectations": {
+        "criteria": [
+          "It reminds them of required items and helps avoid forgetting things.",
+          "Give a clear short answer without creating an unrelated long packing list."
+        ],
+        "review_method": "human rubric; equivalent wording accepted unless the requested format is exact"
+      }
+    }
+  ]
+}

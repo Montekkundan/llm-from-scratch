@@ -91,6 +91,95 @@ python experiments.py ablation-plan --artifact runs/picollm-base --output runs/e
 
 For continuation, compare final state-dictionary tensors and `history.json`; keep the total schedule budget fixed. Exact CPU continuation was checked in the same runtime. Cross-device/version bit identity is not promised. `profile` records bounded CPU timing; `quantize` is a round/dequantize error probe with FP32 storage; `distributed` proves gradient-weighting algebra without launching a process group; `recompute` checks actual checkpointed block gradients; `scaling` and `ablation-plan` produce research plans, not unrun research conclusions.
 
+## GPU experiments and progress checks
+
+The CPU path above teaches the mechanics. These separate experiments train the same decoder at 122,702,592 or 404,804,608 parameters on natural English web documents, then tune it for conversations. Web pretraining learns document continuation; it does not by itself teach a chat protocol. The 1.7B experiment instead adapts an existing SmolLM2 foundation with LoRA. Its original pretraining is credited to Hugging Face.
+
+Run commands from this source directory. Install the optional pinned packages with `python -m pip install -r requirements-gpu.txt`. CPU and MPS checks used Python 3.11 and PyTorch 2.9.1. A100 checks used Python 3.12 and PyTorch 2.14.0+cu130 through a read-only university CUDA environment, with the experiment's own package overlay. The repository's PyTorch 2.9.1 CUDA wheel has not been GPU-tested in that environment.
+
+Prepare the pinned FineWeb-Edu `sample-10BT` source and save its tokenizer:
+
+```sh
+python prepare_corpus.py --output data/fineweb-edu --dataset-revision 87f09149ef4734204d70ed1d046ddc9ca3f2b8f9 --tokenizer-revision 31b70e2e869a7173562077fd711b654946d38674 --max-train-tokens 8000110593 --dtype u16
+```
+
+The target is 8,000,110,592 training tokens plus the next-token lookahead. Counts use the pinned SmolLM2 tokenizer, not the GPT-2 token count in the dataset's sample name. The preparer commits complete, hashed token shards to `manifest.json`. Restarting the same command verifies and resumes preparation. In separate terminals or GPU hosts, run one trainer per GPU:
+
+```sh
+python run_pretraining.py --config configs/pico-125m.json --data data/fineweb-edu/manifest.json --output runs/pico-125m --device cuda --save-every 300s
+python run_pretraining.py --config configs/pico-400m.json --data data/fineweb-edu/manifest.json --output runs/pico-400m --device cuda --save-every 300s
+```
+
+The 125M configuration consumes 2,000,027,648 tokens; the 400M configuration consumes 8,000,110,592. `run_pretraining.py` waits when preparation has not committed enough data, then resumes from the last complete checkpoint as new shards arrive. Keep committed shards and the training configuration immutable. Only append verified shards to the same manifest. To resume a paused trainer directly:
+
+```sh
+python gpu_train.py --config configs/pico-125m.json --data data/fineweb-edu/manifest.json --output runs/pico-125m --device cuda --resume latest --save-every 300s
+```
+
+After pretraining, prepare scratch-specific conversation targets and start full-parameter SFT from the selected base checkpoint:
+
+```sh
+python chat_data.py --config configs/chat-scratch-125m.json --output data/chat-scratch-125m --evaluation-suite evaluation/chat-evaluation.json
+python scratch_sft.py --config configs/chat-scratch-125m.json --base-checkpoint runs/pico-125m --data data/chat-scratch-125m --output runs/pico-125m-chat --device cuda --save-every 300s
+python scratch_sft.py --config configs/chat-scratch-125m.json --data data/chat-scratch-125m --output runs/pico-125m-chat --device cuda --resume latest --save-every 300s
+python scratch_chat.py --checkpoint runs/pico-125m-chat --tokenizer data/fineweb-edu/tokenizer --device cuda --dtype bfloat16 --interactive
+python scratch_chat.py --checkpoint runs/pico-125m-chat --tokenizer data/fineweb-edu/tokenizer --device cuda --dtype bfloat16 --suite evaluation/chat-evaluation.json --output runs/pico-125m-chat/generations.json
+```
+
+The third command continues an interrupted SFT run; it does not start another fresh adaptation. For the 400M path, use `configs/chat-scratch-400m.json`, base `runs/pico-400m`, data `data/chat-scratch-400m`, and output `runs/pico-400m-chat`. `scratch_chat.py` loads the saved pretraining tokenizer and verifies its fingerprint. It generates responses from the selected weights. Scratch identity examples credit Montek Singh Kundan with creating the course model and distinguish the borrowed tokenizer from pretrained model weights.
+
+The separate foundation experiment uses the pinned SmolLM2-1.7B-Instruct weights and SmolTalk conversations:
+
+```sh
+python chat_data.py --config configs/chat-1.7b.json --output data/chat-foundation --evaluation-suite evaluation/chat-evaluation.json
+python chat_finetune.py --config configs/chat-1.7b.json --data-dir data/chat-foundation --output runs/chat-1.7b --device cuda --evaluation-suite evaluation/chat-evaluation.json
+python chat_eval.py --config configs/chat-1.7b.json --adapter runs/chat-1.7b/adapter --device cuda --interactive
+python chat_eval.py --config configs/chat-1.7b.json --adapter runs/chat-1.7b/adapter --device cuda --suite evaluation/chat-evaluation.json --output runs/chat-1.7b/generations.json
+```
+
+This preparation produced 10,000,106 nonpadding input tokens and 7,312,756 supervised assistant tokens. The declared 10M budget includes system and user text; it is not 10M training targets. Labels mask system text, user text, headers and padding, while retaining assistant content and its EOS. The tokenizer, source revision, example order, template, data hashes and actual token ledger are recorded. The frozen evaluation prompts are excluded from our SFT data; this does not establish exclusion from the foundation's historical pretraining. The runner captures untouched baseline and adapted generations. Identity scores under the course system measure instruction adherence; the additional neutral-system identity prompts check what the weights learned.
+
+Check preparation and training progress after their logs appear:
+
+```sh
+tail -n 3 data/fineweb-edu/progress.jsonl
+cat runs/pico-125m/runner.json
+tail -n 3 runs/pico-125m/metrics.jsonl
+cat runs/pico-125m/run-report.json
+```
+
+Sample an immutable completed checkpoint between training milestones with `checkpoint_probe.py`. Its fixed development prompts are distinct from `evaluation/chat-evaluation.json`; the frozen suite is read only to reject prompt overlap. Select a complete directory once, copy it to a machine that is not training, and probe that copy. Do not read a directory while it is being copied or rely on a live pointer that checkpoint retention can replace.
+
+For pretraining, resolve `latest.json` once after the copy finishes:
+
+```sh
+mkdir -p runs/probes
+pico_checkpoint="$(python -c 'import json; from pathlib import Path; root=Path("runs/pico-125m"); print(root / json.loads((root / "latest.json").read_text())["checkpoint"])')"
+python checkpoint_probe.py --checkpoint "$pico_checkpoint" --tokenizer data/fineweb-edu/tokenizer --kind pretrain --device mps --dtype float32 --max-new-tokens 32 --metrics runs/pico-125m/metrics.jsonl --output runs/probes/pico-125m-pretrain.json
+```
+
+The 400M command uses the corresponding `runs/pico-400m` paths. Scratch SFT uses the same saved tokenizer and generates chat responses:
+
+```sh
+pico_chat_checkpoint="$(python -c 'import json; from pathlib import Path; root=Path("runs/pico-125m-chat"); print(root / json.loads((root / "latest.json").read_text())["checkpoint"])')"
+python checkpoint_probe.py --checkpoint "$pico_chat_checkpoint" --tokenizer data/fineweb-edu/tokenizer --kind scratch_sft --device mps --dtype float32 --max-new-tokens 32 --metrics runs/pico-125m-chat/metrics.jsonl --output runs/probes/pico-125m-chat.json
+```
+
+For a LoRA checkpoint, use its saved tokenizer files and set `HF_HOME` to the existing cache containing the exact pinned foundation weights. This command loads cached files only and fails if the weights are absent:
+
+```sh
+export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
+python checkpoint_probe.py --checkpoint runs/chat-1.7b/checkpoint-100 --tokenizer runs/chat-1.7b/checkpoint-100 --kind lora --config configs/chat-1.7b.json --device mps --max-new-tokens 32 --output runs/probes/chat-1.7b-checkpoint-100.json
+```
+
+Use `--device cpu --dtype float32` for scratch CPU probes or `--device cuda --dtype bfloat16` on a separate available CUDA GPU. LoRA chooses FP32 on CPU/MPS and BF16 on CUDA. `--frozen-suite PATH` overrides the source-bundled exclusion list; `--metrics PATH` optionally attaches the most recent finite losses at or before the selected checkpoint step. Each JSON report records checkpoint SHA, step, consumed tokens, exact generated IDs, unedited text, finish reason and repetition/length signals. These signals help spot training failures; they do not establish answer quality or final evaluation success.
+
+A complete checkpoint retains model weights, optimizer, scheduler, random state, data cursor, token counts and resolved configuration. Pretraining and scratch SFT publish `complete.json` and update `latest.json` atomically; foundation SFT publishes a hashed `COMPLETE.json` after all resume files exist. An adapter alone is an inference artifact, not a full training checkpoint. Copy only complete checkpoints, verify their hashes, retain their data/configuration identities, and keep the total schedule fixed on resume.
+
+CPU continuation and continuation in the same tested CUDA runtime matched uninterrupted training exactly. A CUDA checkpoint taken at update 2 continued on MPS through update 4 with maximum parameter difference approximately 1.88e-4 against the reference. That verifies bounded portability, not bit identity across devices or PyTorch versions.
+
+Three setup failures are recorded: `EDQUOT` was a user quota failure despite free filesystem space, the macOS runtime required an APFS environment instead of the ExFAT location, and the Hub `RepoFile` import was corrected to `huggingface_hub.hf_api`. These are environment and preparation checks, not model-quality results. Falling loss, completed updates and successful resume do not establish a useful assistant. Review the full held-out responses, including failures, before making a quality claim.
+
 ## Hand the same artifact to the serving project
 
 The base release contains `config.json`, `tokenizer.json`, `model.pt` and a checksum `manifest.json`. Chat adds `chat_template.json`, covered by the manifest. Its SFT report records the base-model checksum, so the relationship is inspectable. `resume.pt` is a separate training checkpoint containing optimizer and random-generator state. Only load artifacts you trust; checksums establish byte identity, not who supplied them.
