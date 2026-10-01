@@ -38,6 +38,23 @@ Outputs refuse to overwrite existing runs or reports. Use a new output path for 
 
 The model source is `course_model.py`; the shared byte IDs are in `tokenizer.py`. `train.py` owns document windows, masked targets, AdamW, scheduling and base export. `evaluate.py` verifies and reloads artifacts. `chat.py` owns the exact role-lines-v1 template and loss labels. `sft.py` adapts the base weights and records parent checksums. `generate.py` samples those weights. `checks.py` and `experiments.py` exercise the actual modules, rather than separate toy architectures.
 
+### Constrained learned FAQ demo
+
+`data/faq.json` contains original teaching examples: 15 training conversations, three validation prompts and four test prompts with disjoint wording. This is a constrained learned FAQ, not a general chatbot. The training prompts include `hi how are you?` and questions about tokens, attention and training. Answers come from model logits at generation time; there is no prompt-to-answer lookup.
+
+```sh
+python sft.py --base runs/picollm-base --data data/faq.json --output runs/faq-demo --steps 600 --max-new-tokens 64
+python sft.py --evaluate runs/faq-demo
+python generate.py runs/faq-demo --message 'hi how are you?' --max-new-tokens 64 --cached
+python generate.py runs/faq-demo --message 'what is a token?' --max-new-tokens 64 --cached
+python generate.py runs/faq-demo --message 'how does attention work?' --max-new-tokens 64 --cached
+python -m unittest test_sft -v
+```
+
+The 600-update budget is fixed before examining held-out results. The reference CPU run learned **15/15 training answers**, scored **1/3 validation answers** and **0/4 test answers**, and spent approximately 5.75 seconds on updates. Inspect every split's generated text and exact-match score in `sft-report.json`; correct answers to trained prompts establish memorization, while unseen wording can fail. The report preserves the dataset, source and base-weight checksums, training history and generated token IDs. `--evaluate` verifies the saved data and reproduces the test outputs after loading the artifact.
+
+For another conversation set, `--data` accepts a JSON array with `id`, `split` (`train`, `validation`, or `test`) and `messages` containing text `role`/`content` pairs ending with an assistant answer. IDs must be unique and all three splits must be nonempty. The loader rejects duplicate conversations and prompts or declared `group` values shared across splits. Near duplicates require review. The optional generation limit defaults to 64 byte tokens for custom data and 12 for the original echo exercise; prompts plus the requested limit must fit the model context. No truncation is implicit.
+
 ## Train on your own document corpus
 
 The synthetic default is a quick diagnostic. For a substantial language-model experiment, prepare separate UTF-8 document directories you are authorized to train on. Assign all documents from the same source group to one split **before** windowing. Use a top-level subdirectory for a related group, such as `train/book-a/chapter1.txt`; do not put `book-a` in validation or test too. The converter uses that top-level directory as the group, or the filename stem for standalone files. Review near duplicates yourself; the code only detects exact content duplicates and declared group overlap. Keep the test split untouched while choosing the architecture, learning rate and stopping rule on training/validation.

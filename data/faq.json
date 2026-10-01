@@ -1,0 +1,332 @@
+[
+  {
+    "id": "faq-train-1",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello!"
+      }
+    ]
+  },
+  {
+    "id": "faq-train-2",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello!"
+      }
+    ]
+  },
+  {
+    "id": "faq-train-3",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hey"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello!"
+      }
+    ]
+  },
+  {
+    "id": "faq-train-4",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi how are you?"
+      },
+      {
+        "role": "assistant",
+        "content": "I am a small model, ready to help."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-5",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what is your name?"
+      },
+      {
+        "role": "assistant",
+        "content": "I am PicoLLM."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-6",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "who are you?"
+      },
+      {
+        "role": "assistant",
+        "content": "I am PicoLLM."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-7",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what can you do?"
+      },
+      {
+        "role": "assistant",
+        "content": "I answer simple course questions."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-8",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what is a token?"
+      },
+      {
+        "role": "assistant",
+        "content": "A token is a unit of text."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-9",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what is attention?"
+      },
+      {
+        "role": "assistant",
+        "content": "Attention mixes information from tokens."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-10",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what is training?"
+      },
+      {
+        "role": "assistant",
+        "content": "Training adjusts model weights."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-11",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what is a loss?"
+      },
+      {
+        "role": "assistant",
+        "content": "Loss measures prediction error."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-12",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "how many parameters?"
+      },
+      {
+        "role": "assistant",
+        "content": "I have 117248 parameters."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-13",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what is a language model?"
+      },
+      {
+        "role": "assistant",
+        "content": "It predicts the next token."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-14",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what is a transformer?"
+      },
+      {
+        "role": "assistant",
+        "content": "A model built from attention blocks."
+      }
+    ]
+  },
+  {
+    "id": "faq-train-15",
+    "split": "train",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "bye"
+      },
+      {
+        "role": "assistant",
+        "content": "Goodbye!"
+      }
+    ]
+  },
+  {
+    "id": "faq-validation-1",
+    "split": "validation",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello!"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello!"
+      }
+    ]
+  },
+  {
+    "id": "faq-validation-2",
+    "split": "validation",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what are tokens?"
+      },
+      {
+        "role": "assistant",
+        "content": "A token is a unit of text."
+      }
+    ]
+  },
+  {
+    "id": "faq-validation-3",
+    "split": "validation",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "can you tell me your name?"
+      },
+      {
+        "role": "assistant",
+        "content": "I am PicoLLM."
+      }
+    ]
+  },
+  {
+    "id": "faq-test-1",
+    "split": "test",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi, how are you?"
+      },
+      {
+        "role": "assistant",
+        "content": "I am a small model, ready to help."
+      }
+    ]
+  },
+  {
+    "id": "faq-test-2",
+    "split": "test",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is a token?"
+      },
+      {
+        "role": "assistant",
+        "content": "A token is a unit of text."
+      }
+    ]
+  },
+  {
+    "id": "faq-test-3",
+    "split": "test",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "how does attention work?"
+      },
+      {
+        "role": "assistant",
+        "content": "Attention mixes information from tokens."
+      }
+    ]
+  },
+  {
+    "id": "faq-test-4",
+    "split": "test",
+    "source": "Original PicoLLM teaching examples, revision 1",
+    "messages": [
+      {
+        "role": "user",
+        "content": "what does training do?"
+      },
+      {
+        "role": "assistant",
+        "content": "Training adjusts model weights."
+      }
+    ]
+  }
+]
