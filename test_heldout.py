@@ -7,7 +7,10 @@ import tempfile
 import unittest
 
 from evaluate import unigram_baseline
+from evaluate import load_artifact
 from train import read_documents
+from course_model import PicoLLM, ModelConfig
+import torch
 
 
 ROOT = Path(__file__).parent
@@ -18,6 +21,33 @@ def write_split(path, split, text, group):
 
 
 class HeldoutTests(unittest.TestCase):
+    def test_zero_update_export_preserves_random_weights_and_can_resume(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            initial, resumed, full = (tmp / name for name in ("initial", "resumed", "full"))
+            options = ["--steps", "1", "--width", "16", "--heads", "2",
+                       "--layers", "1", "--context", "8", "--ff-width", "32"]
+            subprocess.run([sys.executable, str(ROOT / "train.py"), "--output", str(initial),
+                            "--stop-after", "0", *options], check=True, cwd=ROOT,
+                           capture_output=True, text=True)
+            report = json.loads((initial / "run-report.json").read_text())
+            self.assertEqual(report["completed_steps"], 0)
+            self.assertEqual(report["trained_targets"], 0)
+            self.assertEqual(json.loads((initial / "history.json").read_text()), [])
+            self.assertEqual(report["initial"], report["final"])
+            torch.manual_seed(7)
+            expected = PicoLLM(ModelConfig(width=16, heads=2, layers=1, context=8, ff_width=32))
+            restored = load_artifact(initial)
+            for key, value in expected.state_dict().items():
+                torch.testing.assert_close(value, restored.state_dict()[key], rtol=0, atol=0)
+            subprocess.run([sys.executable, str(ROOT / "train.py"), "--output", str(resumed),
+                            "--resume", str(initial / "resume.pt"), *options],
+                           check=True, cwd=ROOT, capture_output=True, text=True)
+            subprocess.run([sys.executable, str(ROOT / "train.py"), "--output", str(full),
+                            *options], check=True, cwd=ROOT, capture_output=True, text=True)
+            for key, value in load_artifact(full).state_dict().items():
+                torch.testing.assert_close(value, load_artifact(resumed).state_dict()[key], rtol=0, atol=0)
+
     def test_converter_writes_declared_test_split(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

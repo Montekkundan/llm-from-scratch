@@ -169,8 +169,8 @@ def main():
     if args.steps < 1 or args.batch_size < 1:
         parser.error("steps and batch size must be positive")
     stop = args.stop_after if args.stop_after is not None else args.steps
-    if not 1 <= stop <= args.steps:
-        parser.error("stop-after must be between 1 and steps")
+    if not 0 <= stop <= args.steps:
+        parser.error("stop-after must be between 0 and steps")
     # Refuse to overwrite a previous experiment.
     args.output.mkdir(parents=True, exist_ok=False)
     torch.set_num_threads(1)
