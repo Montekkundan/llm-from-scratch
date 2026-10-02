@@ -11,7 +11,7 @@ from torch import nn
 from torch.nn import functional as F
 from course_model import PicoLLM, ModelConfig, apply_rope, RMSNorm
 from tokenizer import encode, decode, train_bpe, encode_bpe, decode_bpe, BOS, EOS, PAD, IGNORE
-from train import corpus, batch, measure, optimizer_for, learning_rate
+from train import corpus, batch, measure, optimizer_for, learning_rate, require_new_path
 from chat import serialize
 
 
@@ -152,6 +152,7 @@ def main():
     parser.add_argument('checkpoint', choices=NAMES+['all'])
     parser.add_argument('--output',type=Path)
     args=parser.parse_args()
+    if args.output:require_new_path(args.output)
     names=NAMES if args.checkpoint=='all' else [args.checkpoint]
     results={name:run(name) for name in names}
     report={'model':'PicoLLM','torch':str(torch.__version__),'checks':results}
