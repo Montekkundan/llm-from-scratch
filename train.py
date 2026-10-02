@@ -145,6 +145,15 @@ def write_json(path, value):
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
 
 
+def require_new_path(path, option="--output"):
+    """Artifacts are never overwritten: refuse early and say how to proceed."""
+    path = Path(path)
+    if path.exists():
+        remove = f"rm -r {path}" if path.is_dir() else f"rm {path}"
+        raise FileExistsError(f"{path} already exists and is never overwritten. "
+                              f"Remove it ({remove}) or pass {option} with a path that does not exist yet.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -172,6 +181,7 @@ def main():
     if not 0 <= stop <= args.steps:
         parser.error("stop-after must be between 0 and steps")
     # Refuse to overwrite a previous experiment.
+    require_new_path(args.output)
     args.output.mkdir(parents=True, exist_ok=False)
     torch.set_num_threads(1)
     torch.use_deterministic_algorithms(True)
