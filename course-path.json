@@ -59,7 +59,7 @@
       "invariant": "The model logits and gathered log probabilities give the same token-mean cross-entropy.",
       "prerequisite": "A local copy of the original model project and Python with PyTorch 2.9.1.",
       "next": "tokenization",
-      "explanation": "At this first checkpoint the initialized decoder is a measuring instrument, not a trained model. Trace its [batch, time, vocabulary] output to the objective in checks.py. Later changes to data, cache or chat serialization must preserve this meaning of a logit."
+      "explanation": "At this first checkpoint the initialized decoder is a measuring instrument, not a trained model. Trace its [batch, time, vocabulary] output to the objective in checks.py. Later changes to data, cache or chat serialization must preserve this meaning of a logit. Every command in this path refuses to overwrite its output; to repeat one, remove the file it names or pass a new --output path."
     },
     {
       "order": 2,
@@ -164,10 +164,10 @@
         "python checks.py rope --output runs/checks/05-rope.json"
       ],
       "artifact": "runs/checks/05-rope.json",
-      "invariant": "RoPE preserves pair norms, and a shared position shift leaves the query-key dot product unchanged within tolerance.",
+      "invariant": "RoPE preserves the norm of every query and key vector, and a shared position shift leaves the query-key dot product unchanged within tolerance.",
       "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
       "next": "scaled-dot-product-attention",
-      "explanation": "Keep the pairing convention, rotary base and head width in ModelConfig. At lesson 21 the new query starts at the cached prefix length, not at zero; the common-shift calculation here explains why a cache with the wrong offset can have correct shapes and incorrect predictions."
+      "explanation": "Keep the pairing convention, rotary base and head width in ModelConfig. At lesson 21 the new query starts at the cached prefix length, not at zero; the common-shift calculation here explains why a cache with the wrong offset can have correct shapes and incorrect predictions. test_model.py compares apply_rope with an independent complex-rotation reference and checks that scores depend only on the position difference."
     },
     {
       "order": 6,
@@ -189,7 +189,7 @@
       "invariant": "At position zero the only visible value is its own; gradients from an earlier output to future inputs are zero.",
       "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
       "next": "multi-head-attention",
-      "explanation": "The complete model already stores all heads in one fused projection. Treat a single slice as the mathematical unit in this lesson, then join the slices in the next one. Do not introduce a second attention implementation whose mask semantics could drift from the trained model."
+      "explanation": "The complete model already stores all heads in one fused projection. Treat a single slice as the mathematical unit in this lesson, then join the slices in the next one. Do not introduce a second attention implementation whose mask semantics could drift from the trained model. The scale is 1/sqrt of the head width, not of the model width; test_model.py compares the module with scaled_dot_product_attention and with an explicit softmax reference for several head widths, so removing the factor fails a test."
     },
     {
       "order": 7,
@@ -263,7 +263,7 @@
       "invariant": "Explicit RMSNorm matches PyTorch RMSNorm at eps=1e-5, and zero branches return the original tensor exactly.",
       "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
       "next": "decoder-block",
-      "explanation": "The identity check is a precise consequence of the residual placement, not an assertion that normalization never changes scale. Restore the untouched model after the diagnostic. This is a useful repair tool when a later training failure might come from a branch layout error."
+      "explanation": "The identity check is a precise consequence of the residual placement, not an assertion that normalization never changes scale. Restore the untouched model after the diagnostic. This is a useful repair tool when a later training failure might come from a branch layout error. The normalizer in this project is RMSNorm: it rescales by the root mean square of the features with a learned gain, with no mean subtraction and no bias. There is no LayerNorm in the code, although the lesson title uses the general name."
     },
     {
       "order": 10,
@@ -401,7 +401,7 @@
       "invariant": "The maximum full-versus-accumulated gradient error is below 1e-10 in the float64 check.",
       "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
       "next": "training-configuration-and-hyperparameters",
-      "explanation": "This proof catches a common training-loop bug before a long run: averaging already averaged microbatch losses weights a short document like a long one. The actual CPU trainer uses a direct minibatch, but the verified denominator is also the contract for the distributed extension."
+      "explanation": "This proof catches a common training-loop bug before a long run: averaging already averaged microbatch losses weights a short document like a long one. The actual CPU trainer (train.py) uses one direct minibatch per update and has no gradient accumulation; only gpu_train.py and scratch_sft.py accumulate. The verified denominator is the contract that accumulation and the distributed extension rely on."
     },
     {
       "order": 15,
@@ -479,7 +479,7 @@
       "invariant": "All parameter gradients exist and remain finite; changing suffix tokens leaves the three tested prefixes unchanged.",
       "prerequisite": "The verified PicoLLM source from the preceding checkpoint.",
       "next": "reproducibility-and-research-method",
-      "explanation": "Restore the passing code before saving a checkpoint. If these checks pass but optimization still fails, inspect target counts, data samples, loss reductions and parameter updates in that order. A passing diagnostic narrows the fault boundary; it does not certify all possible inputs or useful generation."
+      "explanation": "Restore the passing code before saving a checkpoint. If these checks pass but optimization still fails, inspect target counts, data samples, loss reductions and parameter updates in that order. A passing diagnostic narrows the fault boundary; it does not certify all possible inputs or useful generation. test_model.py applies the same idea to the attention scale, the causal mask and RoPE: each mutation of those lines fails a named test."
     },
     {
       "order": 18,
@@ -540,7 +540,7 @@
       "phase": "runtime",
       "kind": "core",
       "stageTitle": "Generate from the checkpoint you just trained",
-      "build": "Load runs/picollm-base, encode an actual prompt with BOS and sample one distribution at a time. Record selected IDs, stopping reason, token counts, seed and model fingerprint.",
+      "build": "Load runs/picollm-base, encode an actual prompt with BOS and sample one distribution at a time with greedy decoding, temperature sampling or optional top-k and top-p filtering (both off by default). Record selected IDs, stopping reason, token counts and the model and manifest fingerprints; the seed and sampling arguments are command arguments and are not written into the report.",
       "files": [
         {
           "path": "generate.py",
@@ -584,7 +584,7 @@
       "invariant": "One-token and multi-token continuations agree with full-prefix logits; edited prefixes, another model instance and changed weights are rejected.",
       "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
       "next": "advanced-inference-systems",
-      "explanation": "The cache is request-local ephemeral state, not an extra learned parameter or a new checkpoint format. Reset it after editing conversation history, switching weights or changing the positional convention. Keep full-prefix forward as the correctness oracle, especially near the context boundary."
+      "explanation": "The cache is request-local ephemeral state, not an extra learned parameter or a new checkpoint format. It records a per-instance owner token rather than id(self), because a freed model's id can be reused by a new model. Reset it after editing conversation history, switching weights or changing the positional convention. Keep full-prefix forward as the correctness oracle, especially near the context boundary."
     },
     {
       "order": 22,
@@ -632,7 +632,7 @@
       "invariant": "The tied embedding remains one object, and the report records maximum weight error plus the held-out NLL difference.",
       "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
       "next": "chat-format-and-sft",
-      "explanation": "This experiment isolates quantization error; reconstructed weights still run in FP32 and do not save serving memory. A packed runtime is a separate artifact/loader contract with scales and layout metadata. Keep the original base artifact as the reference and deploy it until that separate runtime is verified."
+      "explanation": "The probe is symmetric per-tensor int8 for weight matrices: there are no zero points, per-channel scales, activation quantization or KV-cache quantization. This experiment isolates quantization error; reconstructed weights still run in FP32 and do not save serving memory. A packed runtime is a separate artifact/loader contract with scales and layout metadata. Keep the original base artifact as the reference and deploy it until that separate runtime is verified."
     },
     {
       "order": 24,
@@ -715,7 +715,7 @@
       "invariant": "The reference run scores 8/8 on training, 0/2 on validation and 0/2 on test; reloading reproduces the saved test token IDs.",
       "prerequisite": "runs/picollm-chat from lesson 25, including sft-data.json and sft-report.json.",
       "next": "scaling-laws-and-compute-optimal-training",
-      "explanation": "The failed held-out cases are part of the course result. They distinguish memorizing a role format and eight answers from learning a general copying rule. Change data, model capacity or training only after declaring a new experiment; do not quietly tune on the two test examples and relabel them held out."
+      "explanation": "The report scores exact match on two held-out words per split and computes no rubric scores or confidence intervals. The failed held-out cases are part of the course result. They distinguish memorizing a role format and eight answers from learning a general copying rule. Change data, model capacity or training only after declaring a new experiment; do not quietly tune on the two test examples and relabel them held out."
     },
     {
       "order": 27,
@@ -741,7 +741,7 @@
       "invariant": "The report counts actual parameters for each candidate and labels 6ND as a planning approximation, not a measured scaling law.",
       "prerequisite": "runs/picollm-base from lesson 19, including its corpus.json and manifest.",
       "next": "distributed-training-and-multi-gpu",
-      "explanation": "This is an optional research extension after a deployable artifact exists. A fitted scaling law needs multiple independently trained configurations and sufficient coverage to separate model size from data budget. Do not fit the three parameter counts as if they were three observed losses."
+      "explanation": "This is an optional research extension after a deployable artifact exists. The command counts parameters and applies 6ND; no curve is fitted. A fitted scaling law needs multiple independently trained configurations and sufficient coverage to separate model size from data budget. Do not fit the three parameter counts as if they were three observed losses."
     },
     {
       "order": 28,
