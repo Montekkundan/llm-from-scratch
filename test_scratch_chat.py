@@ -3,8 +3,8 @@ from dataclasses import asdict
 import copy
 import json
 from pathlib import Path
+import tempfile
 import unittest
-import uuid
 
 import torch
 from torch.nn import functional as F
@@ -19,8 +19,6 @@ from gpu_train import TrainingConfig
 from scratch_chat import evaluate_cases, generate_ids, load_weights
 from scratch_sft import (assistant_loss_sum, collate, load_prepared,
                          train_sft, validate_assistant)
-
-EXPERIMENTS = Path(__file__).resolve().parents[2]
 
 
 class TinyTokenizer:
@@ -107,8 +105,7 @@ class MaskAndGenerationTests(unittest.TestCase):
 class ScratchSFTTests(unittest.TestCase):
     def setUp(self):
         torch.set_num_threads(1)
-        self.root = EXPERIMENTS / "test-artifacts" / ("scratch-" + uuid.uuid4().hex)
-        self.root.mkdir(parents=True)
+        self.root = Path(tempfile.mkdtemp(prefix="scratch-"))
         self.config = ModelConfig(vocab_size=32, width=16, heads=2, layers=1, context=16, ff_width=32)
         self.metadata = {"model": "fixture", "revision": "fixed", "vocab_size": 32}
         self.rows = []
