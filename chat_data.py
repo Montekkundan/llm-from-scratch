@@ -121,10 +121,10 @@ def encode_conversation(messages, tokenizer, context, system=SYSTEM):
             raise ValueError('Assistant turn has no native EOS')
         end = ends[-1] + 1
         labels[start:end] = ids[start:end]
-    truncated = len(ids) > context
+    # Truncation only cuts. The end-of-turn token is supervised where the assistant
+    # turn really ends, never forged at the cut: a row cut mid-answer must not teach
+    # the model to stop mid-sentence.
     ids, labels = ids[:context], labels[:context]
-    if truncated and labels[-1] != -100:
-        ids[-1] = labels[-1] = tokenizer.eos_token_id
     if not any(label not in (-100, tokenizer.eos_token_id) for label in labels[1:]):
         return None
     return {'input_ids': ids, 'attention_mask': [1] * len(ids), 'labels': labels}
@@ -157,7 +157,8 @@ def prepare(config, output, tokenizer, train_source, eval_source, suite=None):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     if any((output / name).exists() for name in ('train.jsonl', 'heldout.jsonl', 'manifest.json')):
-        raise FileExistsError('Prepared files exist; use a fresh data directory')
+        raise FileExistsError(f'Prepared files exist in {output}; they are never overwritten. '
+                              'Remove train.jsonl, heldout.jsonl and manifest.json there, or pass --output with a new directory.')
     heldout, seen, skipped = [], set(), {'invalid_or_foreign_identity': 0, 'no_assistant_targets': 0, 'duplicate': 0, 'evaluation_overlap': 0}
     excluded_users = {digest for case in (suite or {}).get('cases', []) for digest in case['user_message_sha256']}
     excluded_conversations = {case['conversation_sha256'] for case in (suite or {}).get('cases', [])}
