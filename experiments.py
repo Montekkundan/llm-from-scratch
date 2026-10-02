@@ -16,7 +16,7 @@ from course_model import PicoLLM, ModelConfig
 from evaluate import load_artifact
 from generate import generate_ids
 from tokenizer import BOS, IGNORE, encode
-from train import batch, measure
+from train import batch, measure, require_new_path
 
 
 def cache_check(model):
@@ -158,6 +158,7 @@ def main():
     parser.add_argument('--artifact', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    require_new_path(args.output)
     torch.set_num_threads(1)
     model = load_artifact(args.artifact)
     rows = json.loads((args.artifact / 'corpus.json').read_text())
