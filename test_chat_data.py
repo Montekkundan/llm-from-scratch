@@ -51,14 +51,31 @@ class ChatDataTests(unittest.TestCase):
         labels = encode_conversation(multi, self.tokenizer, 1024)['labels']
         self.assertEqual(sum(label == 2 for label in labels), 2)
 
-    def test_truncates_an_assistant_with_eos_and_skips_all_masked_rows(self):
+    def test_truncation_never_forges_an_end_of_turn_label(self):
         messages = clean_messages(pair(assistant='A' * 200))
         prefix_length = len(self.tokenizer.apply_chat_template(messages[:2], add_generation_prompt=True))
+        content, eos = ord('A') + 10, self.tokenizer.eos_token_id
+        # Cut inside the answer: twenty content labels and no EOS, input or label.
         row = encode_conversation(messages, self.tokenizer, prefix_length + 20)
-        self.assertEqual(row['input_ids'][-1], 2)
-        self.assertEqual(row['labels'][-1], 2)
+        self.assertEqual(row['labels'][prefix_length:], [content] * 20)
+        self.assertEqual(row['input_ids'][-1], content)
+        self.assertNotIn(eos, row['input_ids'][prefix_length:])
+        self.assertNotIn(eos, [label for label in row['labels'] if label != -100])
+        # Cut one token before the genuine EOS: still no EOS label.
+        row = encode_conversation(messages, self.tokenizer, prefix_length + 200)
+        self.assertEqual((row['input_ids'][-1], row['labels'][-1]), (content, content))
+        self.assertEqual(sum(label == eos for label in row['labels']), 0)
+        # Cut exactly after the genuine EOS: that EOS stays supervised.
+        row = encode_conversation(messages, self.tokenizer, prefix_length + 201)
+        self.assertEqual((row['input_ids'][-1], row['labels'][-1]), (eos, eos))
+        self.assertEqual(sum(label == eos for label in row['labels']), 1)
+
+    def test_rows_without_assistant_content_targets_are_skipped(self):
+        messages = clean_messages(pair(assistant='A' * 200))
+        prefix_length = len(self.tokenizer.apply_chat_template(messages[:2], add_generation_prompt=True))
         self.assertIsNone(encode_conversation(messages, self.tokenizer, prefix_length))
-        self.assertIsNone(encode_conversation(messages, self.tokenizer, prefix_length + 1))
+        row = encode_conversation(messages, self.tokenizer, prefix_length + 1)
+        self.assertEqual([label for label in row['labels'] if label != -100], [ord('A') + 10])
 
     def test_filters_self_introductions_but_preserves_factual_attribution(self):
         for text in ["I'm SmolLM, an assistant.", 'I am an AI assistant developed by Hugging Face.',
@@ -84,7 +101,7 @@ class ChatDataTests(unittest.TestCase):
                             'conversation_sha256': conversation_hash(forbidden)}]}
         training = [{'messages': forbidden}] + [{'messages': pair(f'Training question {index}.', f'Answer {index}.')} for index in range(20)]
         evaluation = [{'messages': pair('Evaluation source question.', 'Evaluation source response.')}]
-        with tempfile.TemporaryDirectory(dir='/Volumes/Alpha/llm-course-experiments') as directory:
+        with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manifests = [prepare(config, root / str(index), self.tokenizer, training, evaluation, suite=suite) for index in range(2)]
             self.assertEqual(manifests[0]['splits'], manifests[1]['splits'])
@@ -130,7 +147,7 @@ class ChatDataTests(unittest.TestCase):
             'conversation_sha256': conversation_hash(forbidden)}]}
         training = [{'messages': forbidden}] + [{'messages': pair(f'Scratch training {index}.', f'Answer {index}.')} for index in range(40)]
         evaluation = [{'messages': forbidden}, {'messages': pair('Distinct evaluation source.', 'Evaluation answer.')}]
-        with tempfile.TemporaryDirectory(dir='/Volumes/Alpha/llm-course-experiments') as directory:
+        with tempfile.TemporaryDirectory() as directory:
             manifest = prepare(config, directory, self.tokenizer, training, evaluation, suite=suite)
             self.assertEqual(manifest['experiment_type'], 'scratch')
             self.assertEqual(manifest['model_kind'], 'scratch')
@@ -155,7 +172,7 @@ class ChatDataTests(unittest.TestCase):
             'dataset_revision': 'fixture', 'identity': 'fixture'}
         identity = identity_messages('scratch')[0]
         suite = {'cases': [{'user_message_sha256': [], 'conversation_sha256': conversation_hash(identity)}]}
-        with tempfile.TemporaryDirectory(dir='/Volumes/Alpha/llm-course-experiments') as directory:
+        with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, 'overlaps'):
                 prepare(config, directory, self.tokenizer, [], [{'messages': pair()}], suite=suite)
         with self.assertRaises(ValueError):
@@ -164,7 +181,7 @@ class ChatDataTests(unittest.TestCase):
             identity_messages('guess')
 
     def test_scratch_configs_are_separate_full_parameter_recipes(self):
-        root = Path(__file__).resolve().parents[2]
+        root = Path(__file__).resolve().parent
         foundation = json.loads((root / 'configs/chat-1.7b.json').read_text())
         self.assertNotIn('experiment_type', foundation)
         self.assertEqual(foundation['learning_rate'], 2e-5)
@@ -188,7 +205,7 @@ class ChatDataTests(unittest.TestCase):
         self.assertTrue(bool((batch['labels'][batch['attention_mask'] == 0] == -100).all()))
 
     def test_complete_checkpoint_rejects_missing_or_changed_state(self):
-        with tempfile.TemporaryDirectory(dir='/Volumes/Alpha/llm-course-experiments') as directory:
+        with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             names = ['optimizer.pt', 'scheduler.pt', 'rng_state.pth', 'trainer_state.json', 'adapter_model.safetensors', 'adapter_config.json']
             for name in names:
