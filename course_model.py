@@ -130,6 +130,15 @@ class PicoLLM(nn.Module):
             x = block(x)
         return self.lm_head(self.final_norm(x))
 
+    def _cache_owner(self):
+        # A cache is valid for exactly one model instance. id(self) is recycled
+        # once a model is freed, so each instance holds its own sentinel instead;
+        # copy.deepcopy and pickling give a copy a different sentinel.
+        token = getattr(self, "_cache_token", None)
+        if token is None:
+            token = self._cache_token = object()
+        return token
+
     @torch.inference_mode()
     def forward_cached(self, input_ids, cache=None):
         """Append a nonempty chunk, returning logits and an immutable cache wrapper.
@@ -145,7 +154,7 @@ class PicoLLM(nn.Module):
             raise ValueError("input_ids must be nonempty torch.long [B,T]")
         versions = tuple(p._version for p in self.parameters())
         if cache is not None:
-            if cache.owner != id(self) or cache.versions != versions:
+            if cache.owner is not self._cache_owner() or cache.versions != versions:
                 raise ValueError("Cache belongs to another model or changed parameters")
             if cache.tokens.shape[0] != input_ids.shape[0] or cache.tokens.device != input_ids.device:
                 raise ValueError("Cache batch or device differs")
@@ -178,14 +187,14 @@ class PicoLLM(nn.Module):
             x = x + block.ffn(block.ffn_norm(x))
             updated.append((k, v))
         tokens = input_ids.clone() if cache is None else torch.cat((cache.tokens, input_ids), 1)
-        return self.lm_head(self.final_norm(x)), KVCache(tuple(updated), tokens, id(self), versions)
+        return self.lm_head(self.final_norm(x)), KVCache(tuple(updated), tokens, self._cache_owner(), versions)
 
 
 @dataclass(frozen=True)
 class KVCache:
     keys_values: tuple
     tokens: torch.Tensor
-    owner: int
+    owner: object
     versions: tuple
 
     def assert_prefix(self, tokens):
