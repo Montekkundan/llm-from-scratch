@@ -16,9 +16,6 @@ from gpu_model import GPUPicoLLM
 from gpu_train import TokenStream, TrainingConfig, learning_rate, read_data, save_interval, train
 
 
-EXPERIMENTS = Path(__file__).resolve().parents[2]
-
-
 class ModelTests(unittest.TestCase):
     def setUp(self):
         torch.set_num_threads(1)
@@ -72,9 +69,7 @@ class ModelTests(unittest.TestCase):
 
 class TrainerTests(unittest.TestCase):
     def setUp(self):
-        root = EXPERIMENTS / "test-artifacts"
-        root.mkdir(parents=True, exist_ok=True)
-        self.tmp = tempfile.TemporaryDirectory(dir=root)
+        self.tmp = tempfile.TemporaryDirectory()
         self.directory = Path(self.tmp.name)
         self.config = self.directory / "config.json"
         self.document = {"model": {"vocab_size": 32, "width": 16, "heads": 2, "layers": 1,
