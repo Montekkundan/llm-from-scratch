@@ -12,7 +12,6 @@ from chat_eval import evaluate_generations
 from gpu_checkpoint import atomic_json, fingerprint, sha256
 from scratch_chat import generate_ids, evaluate_cases, load_tokenizer, load_weights, resolve_device
 
-EXPERIMENTS = Path(__file__).resolve().parents[2]
 FROZEN_SUITE = Path(__file__).resolve().parent / "evaluation" / "chat-evaluation.json"
 PRETRAIN_PROMPTS = [
     "A small language model learns patterns in text by",
@@ -137,7 +136,7 @@ def probe_lora(checkpoint, tokenizer_directory, config_path, device="mps", max_n
     for name in tokenizer_files:
         if name in marker["files"] and sha256(tokenizer_directory / name) != marker["files"][name]:
             raise ValueError("LoRA tokenizer differs from the completed checkpoint: " + name)
-    os.environ.setdefault("HF_HOME", str(EXPERIMENTS / "cache" / "huggingface"))
+    os.environ.setdefault("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     import torch
