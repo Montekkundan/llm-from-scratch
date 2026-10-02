@@ -1,12 +1,12 @@
 """Real tiny-model sampling and immutable-checkpoint integrity proofs."""
 from dataclasses import asdict
 from pathlib import Path
+import tempfile
 import unittest
-import uuid
 
 import torch
 
-from checkpoint_probe import (CHAT_CASES, EXPERIMENTS, FROZEN_SUITE, PRETRAIN_PROMPTS, check_prompt_isolation,
+from checkpoint_probe import (CHAT_CASES, FROZEN_SUITE, PRETRAIN_PROMPTS, check_prompt_isolation,
                               probe_scratch, read_loss_log, recent_losses, sample_signals)
 from course_model import ModelConfig
 from gpu_checkpoint import remove_tree, save_checkpoint, sha256
@@ -29,8 +29,7 @@ class ProbeTests(unittest.TestCase):
     def setUp(self):
         torch.set_num_threads(1)
         torch.manual_seed(71)
-        self.root = EXPERIMENTS / "test-artifacts" / ("probe-" + uuid.uuid4().hex)
-        self.root.mkdir(parents=True)
+        self.root = Path(tempfile.mkdtemp(prefix="probe-"))
         self.config = ModelConfig(vocab_size=64, width=16, heads=2, layers=1, context=128, ff_width=32)
         self.model = GPUPicoLLM(self.config)
         self.tokenizer = TinyTokenizer()
