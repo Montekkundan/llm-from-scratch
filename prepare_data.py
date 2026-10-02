@@ -2,7 +2,7 @@
 import argparse
 import json
 from pathlib import Path
-from train import read_documents
+from train import read_documents, require_new_path
 
 
 def collect(directory, split, source, license_name):
@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--source', required=True, help='Provenance identifier or URL; no automatic download')
     parser.add_argument('--license', required=True, help='The actual terms or your ownership statement')
     args = parser.parse_args()
+    require_new_path(args.output)
     directories = [('train', args.train_dir), ('validation', args.validation_dir)]
     if args.test_dir:
         directories.append(('test', args.test_dir))
