@@ -13,7 +13,7 @@ import torch
 from torch.nn import functional as F
 from tokenizer import TOKENIZER, PAD, IGNORE
 from chat import CHAT_TEMPLATE, serialize
-from train import optimizer_for, measure, write_json
+from train import optimizer_for, measure, require_new_path, write_json
 from evaluate import load_artifact
 from generate import generate_ids
 
@@ -145,6 +145,7 @@ def main():
         return
     if args.base is None or args.output is None or args.steps < 1:
         parser.error("training requires --base, --output and positive --steps")
+    require_new_path(args.output)
     model = load_artifact(args.base)
     if (args.base / "chat_template.json").exists():
         raise ValueError("This SFT experiment starts from the base continuation artifact")
